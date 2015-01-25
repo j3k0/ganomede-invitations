@@ -10,10 +10,13 @@ about =
   description: pk.description
   startDate: (new Date).toISOString()
 
+sendAbout = (req, res, next) ->
+  res.send about
+  next()
+
 addRoutes = (prefix, server) ->
-  server.get "/about", (req, res, next) ->
-    res.send about
-    next()
+  server.get "/about", sendAbout
+  server.get "/#{pk.name}/about", sendAbout
 
 module.exports =
   addRoutes: addRoutes
