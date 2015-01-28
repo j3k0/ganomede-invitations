@@ -16,7 +16,7 @@ sendAbout = (req, res, next) ->
 
 addRoutes = (prefix, server) ->
   server.get "/about", sendAbout
-  server.get "/#{pk.name}/about", sendAbout
+  server.get "/#{prefix}/about", sendAbout
 
 module.exports =
   addRoutes: addRoutes

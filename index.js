@@ -2,9 +2,10 @@ require('coffee-script/register');
 
 var cluster = require("cluster")
 var log = require("./src/log")
+var pkg = require("./package.json");
 
 var port = +process.env.PORT || 8000;
-var routePrefix = process.env.ROUTE_PREFIX || "users";
+var routePrefix = process.env.ROUTE_PREFIX || pkg.api;
 
 if (cluster.isMaster) {
 

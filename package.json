@@ -1,7 +1,8 @@
 {
   "name": "users",
-  "version": "0.0.1",
-  "description": "users micro service",
+  "version": "1.0.0",
+  "api": "invitations/v1",
+  "description": "invitations micro service",
   "private": true,
   "main": "index.js",
   "scripts": {
