@@ -16,10 +16,10 @@ Configuration
 
 Variables available for service configuration.
 
- * `GANOMEDE_REDIS_INVITATIONS_PORT_6379_TCP_ADDR` - IP of the InvitationsDB redis
- * `GANOMEDE_REDIS_INVITATIONS_PORT_6379_TCP_PORT` - Port of the InvitationsDB redis
- * `GANOMEDE_REDIS_AUTH_PORT_6379_TCP_ADDR` - IP of the AuthDB redis
- * `GANOMEDE_REDIS_AUTH_PORT_6379_TCP_PORT` - Port of the AuthDB redis
+ * `REDIS_INVITATIONS_PORT_6379_TCP_ADDR` - IP of the InvitationsDB redis
+ * `REDIS_INVITATIONS_PORT_6379_TCP_PORT` - Port of the InvitationsDB redis
+ * `REDIS_AUTH_PORT_6379_TCP_ADDR` - IP of the AuthDB redis
+ * `REDIS_AUTH_PORT_6379_TCP_PORT` - Port of the AuthDB redis
 
 InvitationDB
 ------------

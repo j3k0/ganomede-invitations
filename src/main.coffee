@@ -1,6 +1,7 @@
 log = require "./log"
 aboutApi = require "./about-api"
 pingApi = require "./ping-api"
+invitationsApi = require "./invitations-api"
 
 addRoutes = (prefix, server) ->
   log.info "adding routes"
@@ -10,6 +11,10 @@ addRoutes = (prefix, server) ->
 
   # About
   aboutApi.addRoutes prefix, server
+
+  # Invitations
+  invitationsApi.initialize()
+  invitationsApi.addRoutes prefix, server
 
 initialize = (callback) ->
   log.info "initializing backend"

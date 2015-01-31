@@ -26,12 +26,13 @@ class Server
     @routes.del[url] = callback
 
   request: (type, url, req, callback) ->
-    @routes[type][url] req, @res = new Res,
-      (data) =>
-        if data
-          @res.status = data.status || 500
-          @res.send data
-        callback? @res
+    res = @res = new Res
+    next = (data) =>
+      if data
+        res.status = data.statusCode || 500
+        res.send data.body
+      callback? res
+    @routes[type][url] req, res, next
 
 module.exports =
   createServer: -> new Server
