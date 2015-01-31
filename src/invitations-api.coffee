@@ -8,6 +8,8 @@ authdbClient = null
 
 initialize = (options) ->
 
+  options = options || {}
+
   if options.authdbClient
     authdbClient = options.authdbClient
   else
@@ -19,8 +21,8 @@ initialize = (options) ->
     redisClient = options.redisClient
   else
     redisClient = redis.createClient(
-      process.env.REDIS_INVITATIONS_PORT_6379_TCP_PORT,
-      process.env.REDIS_INVITATIONS_PORT_6379_TCP_ADDR)
+      process.env.REDIS_INVITATIONS_PORT_6379_TCP_PORT || 6379,
+      process.env.REDIS_INVITATIONS_PORT_6379_TCP_ADDR || "localhost")
 
 addRoutes = (prefix, server) ->
   server.post "/#{prefix}/auth/:authToken/invitations", createInvitation
