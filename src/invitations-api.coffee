@@ -88,7 +88,5 @@ createInvitation = needAuth (req, res, next) ->
 module.exports =
   initialize: initialize
   addRoutes: addRoutes
-  setRedisClient: (newRedis) -> redisClient = newRedis
-  setAuthdbClient: (newAuthdb) -> authdbClient = newAuthdb
 
 # vim: ts=2:sw=2:et:

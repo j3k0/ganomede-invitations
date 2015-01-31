@@ -14,9 +14,10 @@ describe "invitations-api", ->
 
   before ->
     # Setup mock implementation of other modules
+    api.initialize
+      authdbClient: authdb
+      redisClient: redis
     api.addRoutes "test/v0", server
-    api.setRedisClient redis
-    api.setAuthdbClient authdb
     authdb.addAccount "valid-token-12345689", username: "some-username"
 
   #
