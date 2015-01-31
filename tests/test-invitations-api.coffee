@@ -13,7 +13,7 @@ authdb = fakeAuthdb.createClient()
 describe "invitations-api", ->
 
   before ->
-    # Setup fake links to other modules
+    # Setup mock implementation of other modules
     api.addRoutes "test/v0", server
     api.setRedisClient redis
     api.setAuthdbClient authdb
@@ -24,10 +24,12 @@ describe "invitations-api", ->
   #
 
   it "should allow authenticated users to post new invitations", (done) ->
+
     assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
     server.request(
       "post", "/test/v0/auth/:authToken/invitations",
-        params: authToken: "valid-token-12345689"
+        params:
+          authToken: "valid-token-12345689"
         body:
           gameId: "0123456789abcdef012345",
           type: "triominos/v1",
@@ -35,10 +37,15 @@ describe "invitations-api", ->
       , (res) ->
         assert.equal 200, res.status
         assert.ok res.body.id
-        done()
+        redis.get res.body.id, (err, reply) ->
+          obj = JSON.parse(reply)
+          assert.ok !err
+          assert.equal "some-username", obj.from
+          done()
     )
 
   it "should allow only authenticated users to post new invitations", ->
+
     assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
     server.request "post", "/test/v0/auth/:authToken/invitations",
       params: authToken: "invalid-token-12345689"
@@ -49,6 +56,7 @@ describe "invitations-api", ->
     assert.equal 401, server.res.status
 
   it "should allow only valid requests", ->
+
     assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
 
     server.request "post", "/test/v0/auth/:authToken/invitations",

@@ -71,10 +71,11 @@ createInvitation = needAuth (req, res, next) ->
   if !obj.from or !obj.to or !obj.gameId or !obj.type
     err = new restify.InvalidContentError "invalid content"
     return sendError err, next
+  val = JSON.stringify(obj)
   multi = redisClient.multi()
-  multi.lpush obj.from, obj
-  multi.lpush obj.to, obj
-  multi.set obj.id, obj
+  multi.lpush obj.from, val
+  multi.lpush obj.to, val
+  multi.set obj.id, val
   multi.exec (err, replies) ->
     if err
       log.error err
