@@ -4,8 +4,8 @@ api = require "../src/invitations-api"
 fakeRestify = require "./fake-restify"
 server = fakeRestify.createServer()
 
-fakeRedis = require "./fake-redis"
-redis = fakeRedis.createClient()
+fakeRedis = require "fakeredis"
+redis = fakeRedis.createClient("test-invitations-api")
 
 fakeAuthdb = require "./fake-authdb"
 authdb = fakeAuthdb.createClient()
@@ -23,16 +23,20 @@ describe "invitations-api", ->
   # POST new invitations
   #
 
-  it "should allow authenticated users to post new invitations", ->
+  it "should allow authenticated users to post new invitations", (done) ->
     assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
-    server.request "post", "/test/v0/auth/:authToken/invitations",
-      params: authToken: "valid-token-12345689"
-      body:
-        gameId: "0123456789abcdef012345",
-        type: "triominos/v1",
-        to: "valid-username"
-    assert.equal 200, server.res.status
-    assert.ok server.res.body.id
+    server.request(
+      "post", "/test/v0/auth/:authToken/invitations",
+        params: authToken: "valid-token-12345689"
+        body:
+          gameId: "0123456789abcdef012345",
+          type: "triominos/v1",
+          to: "valid-username"
+      , (res) ->
+        assert.equal 200, res.status
+        assert.ok res.body.id
+        done()
+    )
 
   it "should allow only authenticated users to post new invitations", ->
     assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]

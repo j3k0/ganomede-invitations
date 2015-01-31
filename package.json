@@ -20,6 +20,7 @@
     "coffeelint": "^1.6.1",
     "concat-stream": "^1.4.7",
     "eslint": "^0.10.0",
+    "fakeredis": "^0.3.0",
     "forever": "^0.13.0",
     "jshint": "^2.5.10",
     "mocha": "^2.0.1",
