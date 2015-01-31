@@ -101,14 +101,47 @@ describe "invitations-api", ->
   it "should let authenticated users list their invitations", (done) ->
 
     assert.ok server.routes.get["/test/v0/auth/:authToken/invitations"]
-    server.request(
+
+    r1 = -> server.request(
       "get", "/test/v0/auth/:authToken/invitations",
       params:
         authToken: "valid-token-12345689"
       , (res) ->
         assert.equal 200, res.status
         assert.equal "[]", res.body
+        r2()
+    )
+
+    r2 = -> server.request(
+      "post", "/test/v0/auth/:authToken/invitations",
+        params:
+          authToken: "valid-token-12345689"
+        body:
+          gameId: "01",
+          type: "triominos/v1",
+          to: "valid-username"
+        , (res) ->
+          assert.equal 200, res.status
+          r3 res.body.id
+    )
+
+    r3 = (id) -> server.request(
+      "get", "/test/v0/auth/:authToken/invitations",
+      params:
+        authToken: "valid-token-12345689"
+      , (res) ->
+        assert.equal 200, res.status
+        obj = JSON.parse(res.body)
+        assert.equal 1, obj.length
+        assert.equal "some-username", obj[0].from
+        assert.equal "valid-username", obj[0].from
+        assert.equal "triominos/v1", obj[0].from
+        assert.equal "01", obj[0].gameId
+        assert.equal id, obj[0].id
         done()
     )
+
+    r1()
+
 
 # vim: ts=2:sw=2:et:
