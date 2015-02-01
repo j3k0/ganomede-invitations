@@ -24,9 +24,13 @@ Variables available for service configuration.
 InvitationDB
 ------------
 
- * Contains a store "username" -> Array of Invitation
+ * Contains a store:
+   * "invitation-id" -> Invitation
+   * "username" -> Array of Invitation
 
-Each invitation is stored twice (once for each of the users). It has to be removed twice as well.
+Each invitation is stored three times:
+ * globally + once for each of the users.
+ * mind that when removing an invitation.
 
 AuthDB
 ------
