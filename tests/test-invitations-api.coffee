@@ -15,7 +15,7 @@ describe "invitations-api", ->
   beforeEach ->
 
     i += 1
- 
+
     # Setup mock implementation of other modules
     server = fakeRestify.createServer()
     redis = fakeRedis.createClient("test-invitations-#{i}")
@@ -99,7 +99,6 @@ describe "invitations-api", ->
   #
 
   it "should let authenticated users list their invitations", (done) ->
-
     assert.ok server.routes.get["/test/v0/auth/:authToken/invitations"]
 
     r1 = -> server.request(
@@ -142,6 +141,5 @@ describe "invitations-api", ->
     )
 
     r1()
-
 
 # vim: ts=2:sw=2:et:
