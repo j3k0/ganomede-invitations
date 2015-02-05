@@ -28,8 +28,8 @@ describe "invitations-api", ->
       type: "triominos/v1",
       to: "valid-username"
 
-  endpoint = (path) ->
-    return server.url + path
+  endpoint = (token) ->
+    return server.url + "/test/v0/auth/#{token}/invitations"
 
   beforeEach (done) ->
 
@@ -63,7 +63,7 @@ describe "invitations-api", ->
     #assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
 
     superagent
-      .post endpoint("/test/v0/auth/#{data.authTokens.valid}/invitations")
+      .post endpoint(data.authTokens.valid)
       .send data.invitation
       .end (err, res) ->
         assert.ok !err
@@ -79,7 +79,7 @@ describe "invitations-api", ->
     # assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
 
     superagent
-      .post endpoint("/test/v0/auth/#{data.authTokens.invalid}/invitations")
+      .post endpoint(data.authTokens.invalid)
       .send data.invitation
       .end (err, res) ->
         assert.equal 401, res.status
@@ -101,7 +101,7 @@ describe "invitations-api", ->
 
     test = (body, cb) ->
       superagent.agent()
-        .post endpoint("/test/v0/auth/#{data.authTokens.valid}/invitations")
+        .post endpoint(data.authTokens.valid)
         .send body
         .end (err, res) ->
           assert.equal 400, res.status
@@ -122,7 +122,7 @@ describe "invitations-api", ->
     # assert.ok server.routes.get["/test/v0/auth/:authToken/invitations"]
 
     listInvites = (authToken=data.authTokens.valid, cb) ->
-      superagent
+      superagent.agent()
         .get endpoint(authToken)
         .end (err, res) ->
           assert.ok !err # are you sure?
@@ -131,7 +131,7 @@ describe "invitations-api", ->
           cb(res.body)
 
     testInvites = (test) ->
-      return (cb) ->
+      return (_, cb) ->
         listInvites null, (invites) ->
           test(invites)
           cb()
@@ -142,8 +142,8 @@ describe "invitations-api", ->
 
     # add invitation
     invitationId = null
-    t2 = (cb) ->
-      superagent
+    t2 = (_, cb) ->
+      superagent.agent()
         .post endpoint(data.authTokens.valid)
         .send data.invitation
         .end (err, res) ->

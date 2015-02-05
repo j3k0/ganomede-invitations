@@ -23,33 +23,13 @@ authMiddleware = (req, res, next) ->
     req.params.user = account
     next()
 
-# TODO:
-# temp stuff, will figure it out later
-#
-# Invitations that @username have sent or received
-# /invitations/v1/auth/:authToken/invitations
-# class Invitations
-#   constructor: (username) ->
-#     @username = username
-#     @invitations = []
-
-#   query: () ->
-#     redi
-
-#   sent: () ->
-#     username = @username
-#     return @invitations.filter (i) ->
-#       return i.from == username
-
-#   received: () ->
-#     username = @username
-#     return @invitations.filter (i) ->
-#       return i.to == username
-
 #
 # Helpers
 #
 
+class Invitations
+  @serialize: (invite) -> JSON.stringify(invite)
+  @deserialize: (raw) -> JSON.parse(raw)
 
 #
 # Create a new invitation
@@ -72,7 +52,7 @@ createInvitation = (req, res, next) ->
     err = new restify.InvalidContentError "invalid content"
     return sendError err, next
 
-  val = JSON.stringify(obj)
+  val = Invitations.serialize(obj)
   multi = redisClient.multi()
   multi.lpush obj.from, val
   multi.lpush obj.to, val
@@ -101,7 +81,13 @@ initialize = (options={}) ->
       process.env.REDIS_INVITATIONS_PORT_6379_TCP_ADDR || "localhost")
 
 listInvitations = (req, res, next) ->
-  next(new restify.InternalError('not implemented'))
+  redisClient.lrange req.params.user.username, 0, -1, (err, list) ->
+    if err
+      log.error err
+      return sendError(new restify.InternalError('failed to query db'))
+
+    res.send(list.map(Invitations.deserialize))
+    next()
 
 addRoutes = (prefix, server) ->
   endpoint = "/#{prefix}/auth/:authToken/invitations"
