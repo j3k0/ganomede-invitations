@@ -1,6 +1,8 @@
 assert = require "assert"
+restify = require 'restify'
+vasync = require 'vasync'
+superagent = require 'superagent'
 api = require "../src/invitations-api"
-
 fakeRestify = require "./fake-restify"
 fakeRedis = require "fakeredis"
 fakeAuthdb = require "./fake-authdb"
@@ -12,134 +14,160 @@ describe "invitations-api", ->
   authdb = null
   i = 0
 
-  beforeEach ->
+  # some sample data
+  data =
+    authTokens:
+      valid: 'valid-token-12345689'
+      invalid: 'invalid-token-12345689'
+
+    usernames:
+      from: 'some-username'
+      to: 'valid-username'
+
+    invitation:
+      gameId: "0123456789abcdef012345",
+      type: "triominos/v1",
+      to: "valid-username"
+
+  endpoint = (path) ->
+    return server.url + path
+
+  beforeEach (done) ->
 
     i += 1
 
     # Setup mock implementation of other modules
-    server = fakeRestify.createServer()
+    # server = fakeRestify.createServer()
+    server = restify.createServer()
     redis = fakeRedis.createClient("test-invitations-#{i}")
     authdb = fakeAuthdb.createClient()
     api.initialize
       authdbClient: authdb
       redisClient: redis
+    authdb.addAccount data.authTokens.valid, username: data.usernames.from
+
+    server.use(restify.bodyParser())
     api.addRoutes "test/v0", server
-    authdb.addAccount "valid-token-12345689", username: "some-username"
+    server.listen(1337, done)
+
+  afterEach (done) ->
+    server.close()
+    server.once('close', done)
 
   #
   # POST new invitations
   #
 
   it "should allow authenticated users to post new invitations", (done) ->
+    # we can't access routes bound this way (we can, but we don't know id),
+    # but we making requests to them anyway so we shouldn't really bother
+    # checking them manually
+    #assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
 
-    assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
-    server.request(
-      "post", "/test/v0/auth/:authToken/invitations",
-        params:
-          authToken: "valid-token-12345689"
-        body:
-          gameId: "0123456789abcdef012345",
-          type: "triominos/v1",
-          to: "valid-username"
-      , (res) ->
+    superagent
+      .post endpoint("/test/v0/auth/#{data.authTokens.valid}/invitations")
+      .send data.invitation
+      .end (err, res) ->
+        assert.ok !err
         assert.equal 200, res.status
         assert.ok res.body.id
+
         redis.get res.body.id, (err, reply) ->
-          obj = JSON.parse(reply)
           assert.ok !err
-          assert.equal "some-username", obj.from
+          assert.equal 'some-username', JSON.parse(reply).from
           done()
-    )
 
   it "should allow only authenticated users to post new invitations", (done) ->
+    # assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
 
-    assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
-    server.request(
-      "post", "/test/v0/auth/:authToken/invitations",
-      params: authToken: "invalid-token-12345689"
-      body:
-        gameId: "0123456789abcdef012345",
-        type: "triominos/v1",
-        to: "valid-username"
-      , (res) ->
+    superagent
+      .post endpoint("/test/v0/auth/#{data.authTokens.invalid}/invitations")
+      .send data.invitation
+      .end (err, res) ->
         assert.equal 401, res.status
         done()
-    )
 
-  it "should allow only valid requests", ->
+  it "should allow only valid requests", (done) ->
+    # assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
 
-    assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
+    badInvites = [
+      gameId: data.invitation.gameId
+      type: data.invitation.type
+    ,
+      gameId: data.invitation.gameId
+      to: data.invitation.to
+    ,
+      type: data.invitation.type
+      to: data.invitation.to
+    ]
 
-    server.request "post", "/test/v0/auth/:authToken/invitations",
-      params: authToken: "valid-token-12345689"
-      body:
-        gameId: "0123456789abcdef012345",
-        type: "triominos/v1"
-    assert.equal 400, server.res.status
-    assert.equal "InvalidContent", server.res.body.code
+    test = (body, cb) ->
+      superagent.agent()
+        .post endpoint("/test/v0/auth/#{data.authTokens.valid}/invitations")
+        .send body
+        .end (err, res) ->
+          assert.equal 400, res.status
+          assert.equal 'InvalidContent', res.body.code
+          cb()
 
-    server.request "post", "/test/v0/auth/:authToken/invitations",
-      params: authToken: "valid-token-12345689"
-      body:
-        gameId: "0123456789abcdef012345",
-        to: "valid-username"
-    assert.equal 400, server.res.status
-    assert.equal "InvalidContent", server.res.body.code
-
-    server.request "post", "/test/v0/auth/:authToken/invitations",
-      params: authToken: "valid-token-12345689"
-      body:
-        type: "triominos/v1"
-        to: "valid-username"
-    assert.equal 400, server.res.status
-    assert.equal "InvalidContent", server.res.body.code
+    vasync.forEachParallel
+      func: test
+      inputs: badInvites
+      ,
+      done
 
   #
   # List user invitations
   #
 
   it "should let authenticated users list their invitations", (done) ->
-    assert.ok server.routes.get["/test/v0/auth/:authToken/invitations"]
+    # assert.ok server.routes.get["/test/v0/auth/:authToken/invitations"]
 
-    r1 = -> server.request(
-      "get", "/test/v0/auth/:authToken/invitations",
-      params:
-        authToken: "valid-token-12345689"
-      , (res) ->
-        assert.equal 200, res.status
-        assert.equal "[]", res.body
-        r2()
-    )
-
-    r2 = -> server.request(
-      "post", "/test/v0/auth/:authToken/invitations",
-        params:
-          authToken: "valid-token-12345689"
-        body:
-          gameId: "01",
-          type: "triominos/v1",
-          to: "valid-username"
-        , (res) ->
+    listInvites = (authToken=data.authTokens.valid, cb) ->
+      superagent
+        .get endpoint(authToken)
+        .end (err, res) ->
+          assert.ok !err # are you sure?
           assert.equal 200, res.status
-          r3 res.body.id
-    )
+          assert.ok Array.isArray(res.body)
+          cb(res.body)
 
-    r3 = (id) -> server.request(
-      "get", "/test/v0/auth/:authToken/invitations",
-      params:
-        authToken: "valid-token-12345689"
-      , (res) ->
-        assert.equal 200, res.status
-        obj = JSON.parse(res.body)
-        assert.equal 1, obj.length
-        assert.equal "some-username", obj[0].from
-        assert.equal "valid-username", obj[0].from
-        assert.equal "triominos/v1", obj[0].from
-        assert.equal "01", obj[0].gameId
-        assert.equal id, obj[0].id
-        done()
-    )
+    testInvites = (test) ->
+      return (cb) ->
+        listInvites (invites) ->
+          test(invites)
+          cb()
 
-    r1()
+    # empty at first
+    t1 = (invites) ->
+      assert.equal 0, this.length
+
+    # add invitation
+    invitationId = null
+    t2 = (cb) ->
+      superagent
+        .post endpoint(data.authTokens.valid)
+        .send data.invitation
+        .end (err, res) ->
+          assert.ok !err
+          assert.equal 200, res.status
+          assert.ok res.body.id
+          invitationId = res.body.id
+          cb()
+
+    # shoud have one invite
+    t3 = (invites) ->
+      invite = invites[0]
+      assert.equal 1, invites.length
+      assert.equal data.usernames.from, invite.from
+      assert.equal data.invitation.to, invite.to
+      assert.equal data.invitation.type, invite.type
+      assert.equal data.invitation.gameId, invite.gameId
+      assert.equal invitationId, invite.id
+
+    vasync.pipeline
+      funcs: [testInvites(t1), t2, testInvites(t3)]
+      ,
+      done
 
 # vim: ts=2:sw=2:et:
