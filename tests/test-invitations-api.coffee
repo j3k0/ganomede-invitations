@@ -3,7 +3,6 @@ restify = require 'restify'
 vasync = require 'vasync'
 superagent = require 'superagent'
 api = require "../src/invitations-api"
-fakeRestify = require "./fake-restify"
 fakeRedis = require "fakeredis"
 fakeAuthdb = require "./fake-authdb"
 
@@ -37,7 +36,6 @@ describe "invitations-api", ->
     i += 1
 
     # Setup mock implementation of other modules
-    # server = fakeRestify.createServer()
     server = restify.createServer()
     redis = fakeRedis.createClient("test-invitations-#{i}")
     authdb = fakeAuthdb.createClient()
@@ -140,7 +138,7 @@ describe "invitations-api", ->
 
     # empty at first
     t1 = (invites) ->
-      assert.equal 0, this.length
+      assert.equal 0, invites.length
 
     # add invitation
     invitationId = null
