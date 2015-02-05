@@ -132,7 +132,7 @@ describe "invitations-api", ->
 
     testInvites = (test) ->
       return (cb) ->
-        listInvites (invites) ->
+        listInvites null, (invites) ->
           test(invites)
           cb()
 
