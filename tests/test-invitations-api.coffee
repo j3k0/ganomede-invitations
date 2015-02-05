@@ -168,4 +168,13 @@ describe "invitations-api", ->
       ,
       done
 
+  it 'should reject unauthorized users with HTTP 401', (done) ->
+    superagent
+      .get endpoint(data.authTokens.invalid)
+      .end (err, res) ->
+        assert.equal 401, res.status
+        assert.equal 'UnauthorizedError', res.body.code
+        done()
+
+
 # vim: ts=2:sw=2:et:
