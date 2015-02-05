@@ -31,6 +31,13 @@ describe "invitations-api", ->
   endpoint = (token) ->
     return server.url + "/test/v0/auth/#{token}/invitations"
 
+  expect401 = (done) ->
+    return (err, res) ->
+      assert.ok !err
+      assert.equal 401, res.status
+      assert.equal 'UnauthorizedError', res.body.code
+      done()
+
   beforeEach (done) ->
 
     i += 1
@@ -52,129 +59,110 @@ describe "invitations-api", ->
     server.close()
     server.once('close', done)
 
-  #
-  # POST new invitations
-  #
-
-  it "should allow authenticated users to post new invitations", (done) ->
-    # we can't access routes bound this way (we can, but we don't know id),
-    # but we making requests to them anyway so we shouldn't really bother
-    # checking them manually
-    #assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
-
-    superagent
-      .post endpoint(data.authTokens.valid)
-      .send data.invitation
-      .end (err, res) ->
-        assert.ok !err
-        assert.equal 200, res.status
-        assert.ok res.body.id
-
-        redis.get res.body.id, (err, reply) ->
-          assert.ok !err
-          assert.equal 'some-username', JSON.parse(reply).from
-          done()
-
-  it "should allow only authenticated users to post new invitations", (done) ->
-    # assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
-
-    superagent
-      .post endpoint(data.authTokens.invalid)
-      .send data.invitation
-      .end (err, res) ->
-        assert.equal 401, res.status
-        done()
-
-  it "should allow only valid requests", (done) ->
-    # assert.ok server.routes.post["/test/v0/auth/:authToken/invitations"]
-
-    badInvites = [
-      gameId: data.invitation.gameId
-      type: data.invitation.type
-    ,
-      gameId: data.invitation.gameId
-      to: data.invitation.to
-    ,
-      type: data.invitation.type
-      to: data.invitation.to
-    ]
-
-    test = (body, cb) ->
-      superagent.agent()
-        .post endpoint(data.authTokens.valid)
-        .send body
-        .end (err, res) ->
-          assert.equal 400, res.status
-          assert.equal 'InvalidContent', res.body.code
-          cb()
-
-    vasync.forEachParallel
-      func: test
-      inputs: badInvites
-      ,
-      done
-
-  #
-  # List user invitations
-  #
-
-  it "should let authenticated users list their invitations", (done) ->
-    # assert.ok server.routes.get["/test/v0/auth/:authToken/invitations"]
-
-    listInvites = (authToken=data.authTokens.valid, cb) ->
-      superagent.agent()
-        .get endpoint(authToken)
-        .end (err, res) ->
-          assert.ok !err # are you sure?
-          assert.equal 200, res.status
-          assert.ok Array.isArray(res.body)
-          cb(res.body)
-
-    testInvites = (test) ->
-      return (_, cb) ->
-        listInvites null, (invites) ->
-          test(invites)
-          cb()
-
-    # empty at first
-    t1 = (invites) ->
-      assert.equal 0, invites.length
-
-    # add invitation
-    invitationId = null
-    t2 = (_, cb) ->
-      superagent.agent()
+  describe 'POST: Add new invitations', () ->
+    it "should allow authenticated users to create new invitations", (done) ->
+      superagent
         .post endpoint(data.authTokens.valid)
         .send data.invitation
         .end (err, res) ->
           assert.ok !err
           assert.equal 200, res.status
           assert.ok res.body.id
-          invitationId = res.body.id
-          cb()
 
-    # shoud have one invite
-    t3 = (invites) ->
-      invite = invites[0]
-      assert.equal 1, invites.length
-      assert.equal data.usernames.from, invite.from
-      assert.equal data.invitation.to, invite.to
-      assert.equal data.invitation.type, invite.type
-      assert.equal data.invitation.gameId, invite.gameId
-      assert.equal invitationId, invite.id
+          redis.get res.body.id, (err, reply) ->
+            assert.ok !err
+            assert.equal 'some-username', JSON.parse(reply).from
+            done()
 
-    vasync.pipeline
-      funcs: [testInvites(t1), t2, testInvites(t3)]
+    it "should reject unauthenitacted users with HTTP 401", (done) ->
+      superagent
+        .post endpoint(data.authTokens.invalid)
+        .send data.invitation
+        .end expect401(done)
+
+    it "should allow only valid requests", (done) ->
+      badInvites = [
+        gameId: data.invitation.gameId
+        type: data.invitation.type
       ,
-      done
+        gameId: data.invitation.gameId
+        to: data.invitation.to
+      ,
+        type: data.invitation.type
+        to: data.invitation.to
+      ]
 
-  it 'should reject unauthorized users with HTTP 401', (done) ->
-    superagent
-      .get endpoint(data.authTokens.invalid)
-      .end (err, res) ->
-        assert.equal 401, res.status
-        assert.equal 'UnauthorizedError', res.body.code
-        done()
+      test = (body, cb) ->
+        superagent.agent()
+          .post endpoint(data.authTokens.valid)
+          .send body
+          .end (err, res) ->
+            assert.equal 400, res.status
+            assert.equal 'InvalidContent', res.body.code
+            cb()
 
+      vasync.forEachParallel
+        func: test
+        inputs: badInvites
+        ,
+        done
+
+  #
+  # List user invitations
+  #
+
+  describe 'GET: List user invitations', () ->
+    it "should allow authenticated users list their invitations", (done) ->
+      listInvites = (authToken=data.authTokens.valid, cb) ->
+        superagent
+          .get endpoint(authToken)
+          .end (err, res) ->
+            assert.ok !err
+            assert.equal 200, res.status
+            assert.ok Array.isArray(res.body)
+            cb(res.body)
+
+      testInvites = (test) ->
+        return (_, cb) ->
+          listInvites null, (invites) ->
+            test(invites)
+            cb()
+
+      # empty at first
+      t1 = (invites) ->
+        assert.equal 0, invites.length
+
+      # add invitation
+      invitationId = null
+      t2 = (_, cb) ->
+        superagent
+          .post endpoint(data.authTokens.valid)
+          .send data.invitation
+          .end (err, res) ->
+            assert.ok !err
+            assert.equal 200, res.status
+            assert.ok res.body.id
+            invitationId = res.body.id
+            cb()
+
+      # shoud have one invite
+      t3 = (invites) ->
+        invite = invites[0]
+        assert.equal 1, invites.length
+        assert.equal data.usernames.from, invite.from
+        assert.equal data.invitation.to, invite.to
+        assert.equal data.invitation.type, invite.type
+        assert.equal data.invitation.gameId, invite.gameId
+        assert.equal invitationId, invite.id
+
+      vasync.pipeline
+        funcs: [testInvites(t1), t2, testInvites(t3)]
+        ,
+        done
+
+    it 'should reject unauthenitacted users with HTTP 401', (done) ->
+      superagent
+        .get endpoint(data.authTokens.invalid)
+        .end expect401(done)
 
 # vim: ts=2:sw=2:et:
