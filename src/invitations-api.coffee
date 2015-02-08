@@ -6,6 +6,8 @@ restify = require "restify"
 redisClient = null
 authdbClient = null
 
+REDIS_TTL_SECONDS = 1296000 # 15 days
+
 sendError = (err, next) ->
   log.error err
   next err
@@ -23,46 +25,93 @@ authMiddleware = (req, res, next) ->
     req.params.user = account
     next()
 
+# Sets EXPIRE of Redis-stored invitations to REDIS_TTL_SECONDS
+expire = (key) ->
+  redisClient.expire key, REDIS_TTL_SECONDS, (err, retval) ->
+    if err
+      log.error("failed to EXPIRE redis key `#{key}`", err)
+
+    if retval == 0
+      log.warn("failed to EXPIRE redis key: `#{key}` does not exist or
+                the timeout could not be set")
+
+updateExpireMiddleware = (req, res, next) ->
+  if req.params.user
+    expire(req.params.user.username)
+
+  if req.params.invitation instanceof Invitation
+    expire(req.params.invitation.id)
+
+  next()
+
 #
 # Helpers
 #
 
-class Invitations
-  @serialize: (invite) -> JSON.stringify(invite)
-  @deserialize: (raw) -> JSON.parse(raw)
+class Invitation
+  constructor: (from, data) ->
+    @id = Invitation._rand() + Invitation._rand()
+    @from = from
+    @to = data.to
+    @gameId = data.gameId
+    @type = data.type
+
+  valid: () ->
+    @id && @from && @to && @gameId && @type
+
+  saveToRedis: (callback) ->
+    json = JSON.stringify(this)
+    multi = redisClient.multi()
+
+    multi.lpush(@from, json)
+    multi.lpush(@to, json)
+    multi.set(@id, json)
+    multi.exec(callback)
+
+  @fromJSON: (json) ->
+    obj = JSON.parse(json)
+    invitation = new Invitation(obj.from, obj)
+    invitation.id = obj.id
+    return invitation
+
+  @forUsername: (username, callback) ->
+    redisClient.lrange username, 0, -1, (err, list) ->
+      if (err)
+        return callback(err)
+
+      callback(null, list.map(Invitation.fromJSON))
+
+  @_rand: () ->
+    Math.random().toString(36).substr(2)
 
 #
 # Create a new invitation
 #
 
-# Generate a random token
-rand = ->
-  Math.random().toString(36).substr(2)
-genToken = -> rand() + rand()
-
 createInvitation = (req, res, next) ->
-  obj =
-    id: genToken()
-    from: req.params.user.username
-    to: req.body.to
-    gameId: req.body.gameId
-    type: req.body.type
+  invitation = new Invitation(req.params.user.username, req.body)
+  req.params.invitation = invitation
 
-  if !obj.from or !obj.to or !obj.gameId or !obj.type
+  if !invitation.valid()
     err = new restify.InvalidContentError "invalid content"
     return sendError err, next
 
-  val = Invitations.serialize(obj)
-  multi = redisClient.multi()
-  multi.lpush obj.from, val
-  multi.lpush obj.to, val
-  multi.set obj.id, val
-  multi.exec (err, replies) ->
+  invitation.saveToRedis (err, replies) ->
     if err
       log.error err
       err = new restify.InternalError "failed add to database"
       return sendError err, next
-    res.send obj
+
+    res.send invitation
+    next()
+
+listInvitations = (req, res, next) ->
+  Invitation.forUsername req.params.user.username, (err, list) ->
+    if err
+      log.error err
+      return sendError(new restify.InternalError('failed to query db'))
+
+    res.send(list)
     next()
 
 initialize = (options={}) ->
@@ -80,19 +129,10 @@ initialize = (options={}) ->
       process.env.REDIS_INVITATIONS_PORT_6379_TCP_PORT || 6379,
       process.env.REDIS_INVITATIONS_PORT_6379_TCP_ADDR || "localhost")
 
-listInvitations = (req, res, next) ->
-  redisClient.lrange req.params.user.username, 0, -1, (err, list) ->
-    if err
-      log.error err
-      return sendError(new restify.InternalError('failed to query db'))
-
-    res.send(list.map(Invitations.deserialize))
-    next()
-
 addRoutes = (prefix, server) ->
   endpoint = "/#{prefix}/auth/:authToken/invitations"
-  server.get endpoint, authMiddleware, listInvitations
-  server.post endpoint, authMiddleware, createInvitation
+  server.get endpoint, authMiddleware, listInvitations, updateExpireMiddleware
+  server.post endpoint, authMiddleware, createInvitation, updateExpireMiddleware
 
 # Export the module
 module.exports =

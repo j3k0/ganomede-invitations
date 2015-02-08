@@ -71,7 +71,7 @@ describe "invitations-api", ->
 
           redis.get res.body.id, (err, reply) ->
             assert.ok !err
-            assert.equal 'some-username', JSON.parse(reply).from
+            assert.equal data.usernames.from, JSON.parse(reply).from
             done()
 
     it "should reject unauthenitacted users with HTTP 401", (done) ->
@@ -164,5 +164,34 @@ describe "invitations-api", ->
       superagent
         .get endpoint(data.authTokens.invalid)
         .end expect401(done)
+
+  #
+  # TTL
+  #
+
+  it 'Redis-stored invitations should be EXPIREable', () ->
+    superagent
+      .post endpoint(data.authTokens.valid)
+      .send data.invitation
+      .end (err, res) ->
+        assert.ok !err
+        assert.equal 200, res.status
+
+        redis.keys '*', (err, keys) ->
+          assert.ok !err
+          assert.ok Array.isArray(keys)
+          assert.equal 3, keys.length
+
+          ttlOk = (key, cb) ->
+            redis.ttl key, (err, ttl) ->
+              assert.ok !err
+              assert.ok ttl > 0
+              cb()
+
+          vasync.forEachParallel
+            func: ttlOk
+            inputs: keys
+            ,
+            done
 
 # vim: ts=2:sw=2:et:
