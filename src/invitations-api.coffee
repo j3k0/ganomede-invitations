@@ -45,6 +45,23 @@ updateExpireMiddleware = (req, res, next) ->
 
   next()
 
+# Populates req.params.invitation with redisClient.get(req.params.invitationId)
+findInvitationMiddleware = (req, res, next) ->
+  id = req.params.invitationId
+  if !id
+    return sendError(new restify.InvalidContentError('invalid content'), next)
+
+  Invitation.loadFromRedis id, (err, invitation) ->
+    if err
+      log.error err
+      return sendError(new restify.InternalError('failed to query db'), next)
+
+    if !invitation
+      return sendError(new restify.NotFoundError('not found'), next)
+
+    req.params.invitation = invitation
+    next()
+
 #
 # Helpers
 #
@@ -68,6 +85,23 @@ class Invitation
     multi.sadd(@to, @id)
     multi.set(@id, json)
     multi.exec(callback)
+
+  deleteFromRedis: (callback) ->
+    multi = redisClient.multi()
+    multi.srem(@from, @id)
+    multi.srem(@to, @id)
+    multi.del(@id)
+    multi.exec(callback)
+
+  @loadFromRedis: (id, callback) ->
+    redisClient.get id, (err, json) ->
+      if err
+        return callback(err)
+
+      if !json
+        return callback(null, null)
+
+      callback(null, Invitation.fromJSON(json))
 
   @fromJSON: (json) ->
     obj = JSON.parse(json)
@@ -115,7 +149,7 @@ class Invitation
     Math.random().toString(36).substr(2)
 
 #
-# Create a new invitation
+# Methods
 #
 
 createInvitation = (req, res, next) ->
@@ -139,10 +173,53 @@ listInvitations = (req, res, next) ->
   Invitation.forUsername req.params.user.username, (err, list) ->
     if err
       log.error err
-      return sendError(new restify.InternalError('failed to query db'))
+      return sendError(new restify.InternalError('failed to query db'), next)
 
     res.send(list)
     next()
+
+deleteInvitation = (req, res, next) ->
+  username = req.params.user.username
+  invitation = req.params.invitation
+  reason = req.body.reason
+
+  badReason = (allowed) ->
+    sendError(new restify.InvalidContentError('invalid reason'), next)
+
+  del = () ->
+    invitation.deleteFromRedis (err, replies) ->
+      if err
+        log.error(err)
+        return sendError(new restify.InternalError('failed to query db'), next)
+
+      delete req.params.invitation # don't refresh expire
+      res.send(204)
+      next()
+
+  # TODO:
+  # this looks like a mess...
+
+  if !reason
+    return sendError(new restify.InvalidContentError('reason required'), next)
+
+  if username == invitation.from
+    if reason != 'cancel'
+      return badReason()
+
+    return del()
+
+  if username == invitation.to
+    if (reason != 'accept') && (reason != 'refuse')
+      return badReason()
+
+    return del()
+
+  # Request is only deletable by sender or receiver.
+  return sendError(new restify.ForbiddenError('forbidden'), next)
+
+#
+# Init
+#
 
 initialize = (options={}) ->
   if options.authdbClient
@@ -163,6 +240,8 @@ addRoutes = (prefix, server) ->
   endpoint = "/#{prefix}/auth/:authToken/invitations"
   server.get endpoint, authMiddleware, listInvitations, updateExpireMiddleware
   server.post endpoint, authMiddleware, createInvitation, updateExpireMiddleware
+  server.del "#{endpoint}/:invitationId", authMiddleware,
+    findInvitationMiddleware, deleteInvitation, updateExpireMiddleware
 
 # Export the module
 module.exports =
