@@ -25,12 +25,10 @@ InvitationDB
 ------------
 
  * Contains a store:
-   * "invitation-id" -> Invitation
-   * "username" -> Array of Invitation
+   * "invitation-id" -> Invitation serialized to JSON
+   * "username" -> Set of Invitation IDs where username is either receiver (to) or sender (from) of inivitation
 
-Each invitation is stored three times:
- * globally + once for each of the users.
- * mind that when removing an invitation.
+See #4 for details.
 
 AuthDB
 ------
