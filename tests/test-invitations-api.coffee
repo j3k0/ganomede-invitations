@@ -165,6 +165,48 @@ describe "invitations-api", ->
         .get endpoint(data.authTokens.invalid)
         .end expect401(done)
 
+  describe 'DEL: Delete invitation', () ->
+    it "should let authenticated users delete their invitations", (done) ->
+      assert.ok null
+      # r1 = -> server.request(
+      #   "post", "/test/v0/auth/:authToken/invitations",
+      #     params:
+      #       authToken: "valid-token-12345689"
+      #     body:
+      #       gameId: "01",
+      #       type: "triominos/v1",
+      #       to: "valid-username"
+      #     , (res) ->
+      #       assert.equal 200, res.status
+      #       r2 res.body.id
+      # )
+
+      # r2 = -> server.request(
+      #   "del", "/test/v0/auth/:authToken/invitations/:id",
+      #     params:
+      #       authToken: "valid-token-12345689"
+      #     body:
+      #       reason: "accept"
+
+      #   , (res) ->
+      #     assert.equal 204, res.status
+      #     assert.equal true, res.body.ok
+      #     r3()
+      # )
+
+      # r3 = (id) -> server.request(
+      #   "get", "/test/v0/auth/:authToken/invitations",
+      #   params:
+      #     authToken: "valid-token-12345689"
+      #   , (res) ->
+      #     assert.equal 200, res.status
+      #     obj = JSON.parse(res.body)
+      #     assert.equal 0, obj.length
+      #     done()
+      # )
+
+      # r1()
+
   #
   # TTL
   #
