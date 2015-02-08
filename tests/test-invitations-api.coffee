@@ -169,29 +169,71 @@ describe "invitations-api", ->
   # TTL
   #
 
-  it 'Redis-stored invitations should be EXPIREable', () ->
-    superagent
-      .post endpoint(data.authTokens.valid)
-      .send data.invitation
-      .end (err, res) ->
-        assert.ok !err
-        assert.equal 200, res.status
-
-        redis.keys '*', (err, keys) ->
+  describe 'TTL: Redis-stored invitations should be EXPIREable', () ->
+    it 'should add TTL to newly created invitations', (done) ->
+      superagent
+        .post endpoint(data.authTokens.valid)
+        .send data.invitation
+        .end (err, res) ->
           assert.ok !err
-          assert.ok Array.isArray(keys)
-          assert.equal 3, keys.length
+          assert.equal 200, res.status
 
-          ttlOk = (key, cb) ->
-            redis.ttl key, (err, ttl) ->
+          redis.keys '*', (err, keys) ->
+            assert.ok !err
+            assert.ok Array.isArray(keys)
+            assert.equal 3, keys.length
+
+            ttlOk = (key, cb) ->
+              redis.ttl key, (err, ttl) ->
+                assert.ok !err
+                if key == data.invitation.to
+                  assert.equal -1, ttl # key exists with no ttl
+                else
+                  assert.ok ttl > 0
+                cb()
+
+            vasync.forEachParallel
+              func: ttlOk
+              inputs: keys
+              ,
+              done
+
+    it 'should not include expired invitations in the listing', (done) ->
+      expiredId = null
+
+      add = (next) ->
+        superagent
+          .post endpoint(data.authTokens.valid)
+          .send data.invitation
+          .end (err, res) ->
+            assert.ok !err
+            assert.equal 200, res.status
+            assert.ok res.body.id
+            expiredId = res.body.id
+            next()
+
+      expire = (next) ->
+        WAIT_MS = 1
+        redis.pexpire expiredId, WAIT_MS, (err, retval) ->
+          assert.ok !err
+          assert.equal 1, retval
+          setTimeout next, 2 + WAIT_MS
+
+      add expire.bind null, () ->
+        superagent
+          .get endpoint(data.authTokens.valid)
+          .end (err, res) ->
+            assert.ok !err
+            assert.equal 200, res.status
+            assert.ok Array.isArray(res.body)
+            assert.equal 0, res.body.length
+
+            # Since we expired only invitation in user's list
+            # we expect it to be emptied by Invitation.forUsername
+            redis.smembers data.usernames.from, (err, ids) ->
               assert.ok !err
-              assert.ok ttl > 0
-              cb()
-
-          vasync.forEachParallel
-            func: ttlOk
-            inputs: keys
-            ,
-            done
+              assert.ok Array.isArray(ids)
+              assert.equal 0, ids.length
+              done()
 
 # vim: ts=2:sw=2:et:

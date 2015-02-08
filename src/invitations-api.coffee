@@ -2,6 +2,7 @@ log = require "./log"
 authdb = require "authdb"
 redis = require "redis"
 restify = require "restify"
+vasync = require 'vasync'
 
 redisClient = null
 authdbClient = null
@@ -63,8 +64,8 @@ class Invitation
     json = JSON.stringify(this)
     multi = redisClient.multi()
 
-    multi.lpush(@from, json)
-    multi.lpush(@to, json)
+    multi.sadd(@from, @id)
+    multi.sadd(@to, @id)
     multi.set(@id, json)
     multi.exec(callback)
 
@@ -75,11 +76,35 @@ class Invitation
     return invitation
 
   @forUsername: (username, callback) ->
-    redisClient.lrange username, 0, -1, (err, list) ->
-      if (err)
+    ids = null
+    expiredIds = []
+
+    vasync.waterfall [
+      redisClient.smembers.bind(redisClient, username)
+      (ids_, cb) ->
+        ids = ids_
+        if ids.length
+          redisClient.mget(ids, cb)
+        else
+          process.nextTick(cb.bind(null, null, []))
+    ]
+    ,
+    (err, jsons) ->
+      if err
         return callback(err)
 
-      callback(null, list.map(Invitation.fromJSON))
+      if !ids || ids.length == 0
+        return callback(null, [])
+
+      result = jsons.filter (json, idx) ->
+        if json == null
+          expiredIds.push(ids[idx])
+        return !!json
+
+      if expiredIds.length
+        redisClient.srem(username, expiredIds)
+
+      callback(null, result.map(Invitation.fromJSON))
 
   @_rand: () ->
     Math.random().toString(36).substr(2)
