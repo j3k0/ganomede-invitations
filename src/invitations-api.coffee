@@ -7,7 +7,7 @@ vasync = require 'vasync'
 redisClient = null
 authdbClient = null
 
-REDIS_TTL_SECONDS = 1296000 # 15 days
+REDIS_TTL_SECONDS = 15 * 24 * 3600 # 15 days
 
 sendError = (err, next) ->
   log.error err
@@ -37,7 +37,7 @@ expire = (key) ->
                 the timeout could not be set")
 
 updateExpireMiddleware = (req, res, next) ->
-  if req.params.user
+  if req.params.user?.username
     expire(req.params.user.username)
 
   if req.params.invitation instanceof Invitation
@@ -57,7 +57,7 @@ class Invitation
     @gameId = data.gameId
     @type = data.type
 
-  valid: () ->
+  valid: ->
     @id && @from && @to && @gameId && @type
 
   saveToRedis: (callback) ->
@@ -104,7 +104,12 @@ class Invitation
       if expiredIds.length
         redisClient.srem(username, expiredIds)
 
-      callback(null, result.map(Invitation.fromJSON))
+      try
+        list = result.map(Invitation.fromJSON)
+      catch error
+        return callback(error, null)
+
+      callback(null, list)
 
   @_rand: () ->
     Math.random().toString(36).substr(2)
