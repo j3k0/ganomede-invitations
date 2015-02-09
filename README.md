@@ -24,9 +24,11 @@ Variables available for service configuration.
 InvitationDB
 ------------
 
- * Contains a store "username" -> Array of Invitation
+ * Contains a store:
+   * "invitation-id" -> Invitation serialized to JSON
+   * "username" -> Set of Invitation IDs where username is either receiver (to) or sender (from) of inivitation
 
-Each invitation is stored twice (once for each of the users). It has to be removed twice as well.
+See #4 for details.
 
 AuthDB
 ------
