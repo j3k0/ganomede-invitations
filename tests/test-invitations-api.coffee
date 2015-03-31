@@ -6,6 +6,8 @@ api = require "../src/invitations-api"
 fakeRedis = require "fakeredis"
 fakeAuthdb = require "./fake-authdb"
 
+PREFIX = 'invitations/v1'
+
 describe "invitations-api", ->
 
   server = null
@@ -32,8 +34,8 @@ describe "invitations-api", ->
       to: "valid-username"
 
   endpoint = (token) ->
-    "http://localhost:#{server.address().port}" +
-    "/test/v0/auth/#{token}/invitations"
+    host = "http://localhost:#{server.address().port}"
+    return "#{host}/#{PREFIX}/auth/#{token}/invitations"
 
   expect401 = (done) ->
     return (err, res) ->
@@ -59,7 +61,7 @@ describe "invitations-api", ->
     authdb.addAccount data.authTokens.to, username: data.usernames.to
 
     server.use(restify.bodyParser())
-    api.addRoutes "test/v0", server
+    api.addRoutes(PREFIX, server)
     server.listen(1337, done)
 
   afterEach (done) ->
