@@ -32,7 +32,8 @@ describe "invitations-api", ->
       to: "valid-username"
 
   endpoint = (token) ->
-    return server.url + "/test/v0/auth/#{token}/invitations"
+    "http://localhost:#{server.address().port}" +
+    "/test/v0/auth/#{token}/invitations"
 
   expect401 = (done) ->
     return (err, res) ->

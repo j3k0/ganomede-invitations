@@ -3,6 +3,7 @@ authdb = require "authdb"
 redis = require "redis"
 restify = require "restify"
 vasync = require 'vasync'
+crypto = require 'crypto'
 
 redisClient = null
 authdbClient = null
@@ -68,7 +69,7 @@ findInvitationMiddleware = (req, res, next) ->
 
 class Invitation
   constructor: (from, data) ->
-    @id = Invitation._rand() + Invitation._rand()
+    @id = Invitation.getId(data.type, from, data.to)
     @from = from
     @to = data.to
     @gameId = data.gameId
@@ -145,8 +146,9 @@ class Invitation
 
       callback(null, list)
 
-  @_rand: () ->
-    Math.random().toString(36).substr(2)
+  @getId: (type, from, to) ->
+    str = "#{type}-#{[from, to].sort().join('-')}"
+    crypto.createHash('md5').update(str, 'utf8').digest('hex')
 
 #
 # Methods
