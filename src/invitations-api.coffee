@@ -147,7 +147,11 @@ class Invitation
       callback(null, list)
 
   @getId: (type, from, to) ->
-    str = "#{type}-#{[from, to].sort().join('-')}"
+    str = JSON.stringify({
+      type: type
+      users: [from, to].sort()
+    })
+
     crypto.createHash('md5').update(str, 'utf8').digest('hex')
 
 #
@@ -249,5 +253,6 @@ addRoutes = (prefix, server) ->
 module.exports =
   initialize: initialize
   addRoutes: addRoutes
+  Invitation: Invitation
 
 # vim: ts=2:sw=2:et:
