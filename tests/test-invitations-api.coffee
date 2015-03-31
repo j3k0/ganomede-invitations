@@ -33,6 +33,9 @@ describe "invitations-api", ->
       type: "triominos/v1",
       to: "valid-username"
 
+  fakeSendNotification = () ->
+    # console.log 'fakeSendNotification(%j)', arguments
+
   endpoint = (token) ->
     host = "http://localhost:#{server.address().port}"
     return "#{host}/#{PREFIX}/auth/#{token}/invitations"
@@ -55,6 +58,7 @@ describe "invitations-api", ->
     api.initialize
       authdbClient: authdb
       redisClient: redis
+      sendNotification: fakeSendNotification.bind(null, 'http://fake.com/path')
 
     authdb.addAccount data.authTokens.valid, username: data.usernames.from
     authdb.addAccount data.authTokens.random1, username: data.usernames.random1

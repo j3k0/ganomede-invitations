@@ -4,9 +4,12 @@ redis = require "redis"
 restify = require "restify"
 vasync = require 'vasync'
 crypto = require 'crypto'
+sendNotificationFn = require './send-notification'
+pkg = require '../package.json'
 
 redisClient = null
 authdbClient = null
+sendNotification = null
 
 REDIS_TTL_SECONDS = 15 * 24 * 3600 # 15 days
 
@@ -172,6 +175,15 @@ createInvitation = (req, res, next) ->
       err = new restify.InternalError "failed add to database"
       return sendError err, next
 
+    # send notification
+    sendNotification
+      from: pkg.api
+      to: invitation.to
+      type: 'invitation-created'
+      data:
+        invitation: invitation
+
+    # reply to request
     res.send invitation
     next()
 
@@ -198,6 +210,16 @@ deleteInvitation = (req, res, next) ->
         log.error(err)
         return sendError(new restify.InternalError('failed to query db'), next)
 
+      # send notification
+      sendNotification
+        from: pkg.api
+        to: if (reason == 'cancel') then invitation.to else invitation.from
+        type: 'invitation-deleted'
+        data:
+          reason: reason
+          invitation: invitation
+
+      # Reply to request
       delete req.params.invitation # don't refresh expire
       res.send(204)
       next()
@@ -241,6 +263,21 @@ initialize = (options={}) ->
     redisClient = redis.createClient(
       process.env.REDIS_INVITATIONS_PORT_6379_TCP_PORT || 6379,
       process.env.REDIS_INVITATIONS_PORT_6379_TCP_ADDR || "localhost")
+
+  # If we have sendNotification option, then use that.
+  # Otherwise if ENV variables are set, use those.
+  # Otherwise don't send notifications.
+  if options.sendNotification instanceof Function
+    sendNotification = options.sendNotification
+  else if process.env.hasOwnProperty('NOTIFICATIONS_PORT_8080_TCP_ADDR') &&
+     process.env.hasOwnProperty('NOTIFICATIONS_PORT_8080_TCP_PORT')
+    sendNotification = sendNotificationFn.bind(
+      null,
+      process.env.NOTIFICATIONS_PORT_8080_TCP_ADDR,
+      process.env.NOTIFICATIONS_PORT_8080_TCP_PORT
+    )
+  else
+    sendNotification = () -> # no-op
 
 addRoutes = (prefix, server) ->
   endpoint = "/#{prefix}/auth/:authToken/invitations"
