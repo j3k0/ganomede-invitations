@@ -66,7 +66,7 @@ describe "invitations-api", ->
 
   afterEach (done) ->
     server.close()
-    server.once('close', done)
+    server.once('close', redis.flushdb.bind(redis, done))
 
   describe 'POST: Add new invitations', () ->
     it "should allow authenticated users to create new invitations", (done) ->
