@@ -272,8 +272,8 @@ initialize = (options={}) ->
   if options.sendNotification instanceof Function
     sendNotification = options.sendNotification
   else if ServiceEnv.exists 'NOTIFICATIONS', 8080
-    uri = ServiceEnv.uri('NOTIFICATIONS', 8080)
-    sendNotification = SendNotification.create uri
+    url = ServiceEnv.url('NOTIFICATIONS', 8080)
+    sendNotification = SendNotification.create url
   else
     sendNotification = () -> # no-op
 

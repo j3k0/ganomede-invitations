@@ -1,28 +1,29 @@
 superagent = require 'superagent'
 log = require './log'
 
-sendNotification = (uri, notification, callback) ->
+sendNotification = (url, notification, callback) ->
   if !notification.hasOwnProperty('secret')
     notification.secret = process.env.API_SECRET
 
+  url = "#{url}/notifications/v1/messages"
   log.info "sending notification",
-    uri: uri
+    url: url
     notification: notification
 
   superagent
-    .post(uri)
+    .post(url)
     .send(notification)
     .end (err, res) ->
       if (err)
         log.error 'sendNotification() failed',
           err: err
-          uri: uri
+          url: url
           notification: notification
 
       callback?(err, res.body)
 
 module.exports =
-    create: (uri) ->
-      (notification, callback) -> sendNotification(uri, notification, callback)
+    create: (url) ->
+      (notification, callback) -> sendNotification(url, notification, callback)
 
 # vim: ts=2:sw=2:et:

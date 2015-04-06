@@ -4,16 +4,16 @@ class ServiceEnv
   @exists: (name, port) ->
     return process.env.hasOwnProperty(@addrEnv name,port) &&
       process.env.hasOwnProperty(@portEnv name,port)
-  @uri: (name, port) ->
+  @url: (name, port) ->
     if !@exists name, port
       return undefined
     else
       addr = @addrEnv name,port
       port = @portEnv name,port
-      uri = "http://#{process.env[addr]}"
+      url = "http://#{process.env[addr]}"
       if port != "80"
-        uri += ":#{process.env[port]}"
-      return uri
+        url += ":#{process.env[port]}"
+      return url
   @host: (name, port) ->
     return process.env[@addrEnv name, port] || '127.0.0.1'
   @port: (name, port, defaultValue) ->
