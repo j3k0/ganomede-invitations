@@ -6,6 +6,8 @@ api = require "../src/invitations-api"
 fakeRedis = require "fakeredis"
 fakeAuthdb = require "./fake-authdb"
 
+PREFIX = 'invitations/v1'
+
 describe "invitations-api", ->
 
   server = null
@@ -31,8 +33,12 @@ describe "invitations-api", ->
       type: "triominos/v1",
       to: "valid-username"
 
+  fakeSendNotification = () ->
+    # console.log 'fakeSendNotification(%j)', arguments
+
   endpoint = (token) ->
-    return server.url + "/test/v0/auth/#{token}/invitations"
+    host = "http://localhost:#{server.address().port}"
+    return "#{host}/#{PREFIX}/auth/#{token}/invitations"
 
   expect401 = (done) ->
     return (err, res) ->
@@ -52,18 +58,19 @@ describe "invitations-api", ->
     api.initialize
       authdbClient: authdb
       redisClient: redis
+      sendNotification: fakeSendNotification.bind(null, 'http://fake.com/path')
 
     authdb.addAccount data.authTokens.valid, username: data.usernames.from
     authdb.addAccount data.authTokens.random1, username: data.usernames.random1
     authdb.addAccount data.authTokens.to, username: data.usernames.to
 
     server.use(restify.bodyParser())
-    api.addRoutes "test/v0", server
+    api.addRoutes(PREFIX, server)
     server.listen(1337, done)
 
   afterEach (done) ->
     server.close()
-    server.once('close', done)
+    server.once('close', redis.flushdb.bind(redis, done))
 
   describe 'POST: Add new invitations', () ->
     it "should allow authenticated users to create new invitations", (done) ->
