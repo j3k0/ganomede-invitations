@@ -6,6 +6,7 @@ vasync = require 'vasync'
 crypto = require 'crypto'
 SendNotification = require './send-notification'
 pkg = require '../package.json'
+ServiceEnv = require './service-env'
 
 redisClient = null
 authdbClient = null
@@ -249,41 +250,21 @@ deleteInvitation = (req, res, next) ->
 # Init
 #
 
-class ServiceEnv
-  @addrEnv: (name, port) -> "#{name}_PORT_#{port}_TCP_ADDR"
-  @portEnv: (name, port) -> "#{name}_PORT_#{port}_TCP_PORT"
-  @exists: (name, port) ->
-    return process.env.hasOwnProperty(@addrEnv name,port) &&
-      process.env.hasOwnProperty(@portEnv name,port)
-  @uri: (name, port) ->
-    if !@exists name, port
-      return undefined
-    else
-      addr = @addrEnv name,port
-      port = @portEnv name,port
-      uri = "http://#{process.env[addr]}"
-      if port != "80"
-        uri += ":#{process.env[port]}"
-      return uri
-  @host: (name, port) ->
-    return process.env[@addrEnv name, port] || '127.0.0.1'
-  @port: (name, port, defaultValue) ->
-    return +(process.env[@portEnv name, port] || port)
-
 initialize = (options={}) ->
   if options.authdbClient
     authdbClient = options.authdbClient
   else
     authdbClient = authdb.createClient
-      host: process.env.REDIS_AUTH_PORT_6379_TCP_ADDR || 6379
-      port: process.env.REDIS_AUTH_PORT_6379_TCP_PORT || 'localhost'
+      host: ServiceEnv.host('REDIS_AUTH', 6379)
+      port: ServiceEnv.port('REDIS_AUTH', 6379)
 
   if options.redisClient
     redisClient = options.redisClient
   else
     redisClient = redis.createClient(
-      process.env.REDIS_INVITATIONS_PORT_6379_TCP_PORT || 6379,
-      process.env.REDIS_INVITATIONS_PORT_6379_TCP_ADDR || "localhost")
+      ServiceEnv.port('REDIS_INVITATIONS', 6379),
+      ServiceEnv.host('REDIS_INVITATIONS', 6379)
+    )
 
   # If we have sendNotification option, then use that.
   # Otherwise if ENV variables are set, use those.
@@ -291,7 +272,7 @@ initialize = (options={}) ->
   if options.sendNotification instanceof Function
     sendNotification = options.sendNotification
   else if ServiceEnv.exists 'NOTIFICATIONS', 8080
-    uri = ServiceEnv.uri 'NOTIFICATIONS', 8080
+    uri = ServiceEnv.uri('NOTIFICATIONS', 8080)
     sendNotification = SendNotification.create uri
   else
     sendNotification = () -> # no-op
