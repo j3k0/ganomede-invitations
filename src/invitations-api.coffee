@@ -266,7 +266,8 @@ initialize = (options={}) ->
   else
     redisClient = redis.createClient(
       ServiceEnv.port('REDIS_INVITATIONS', 6379),
-      ServiceEnv.host('REDIS_INVITATIONS', 6379)
+      ServiceEnv.host('REDIS_INVITATIONS', 6379),
+        no_ready_check: true
     )
 
   # If we have sendNotification option, then use that.
