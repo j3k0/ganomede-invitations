@@ -84,19 +84,22 @@ class Invitation
 
   saveToRedis: (callback) ->
     json = JSON.stringify(this)
-    multi = redisClient.multi()
-
-    multi.sadd(@from, @id)
-    multi.sadd(@to, @id)
-    multi.set(@id, json)
-    multi.exec(callback)
+    #multi = redisClient.multi()
+    vasync.parallel funcs: [
+      redisClient.sadd.bind(redisClient, @from, @id)
+      redisClient.sadd.bind(redisClient, @to, @id)
+      redisClient.set.bind(redisClient, @id, json)
+    ], callback
+    #multi.exec(callback)
 
   deleteFromRedis: (callback) ->
-    multi = redisClient.multi()
-    multi.srem(@from, @id)
-    multi.srem(@to, @id)
-    multi.del(@id)
-    multi.exec(callback)
+    #multi = redisClient.multi()
+    vasync.parallel funcs: [
+      redisClient.srem.bind(redisClient, @from, @id)
+      redisClient.srem.bind(redisClient, @to, @id)
+      redisClient.del.bind(redisClient, @id)
+    ], callback
+    #multi.exec(callback)
 
   @loadFromRedis: (id, callback) ->
     redisClient.get id, (err, json) ->
