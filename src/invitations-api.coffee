@@ -37,9 +37,11 @@ expire = (key) ->
     if err
       log.error("failed to EXPIRE redis key `#{key}`", err)
 
-    if retval == 0
-      log.warn("failed to EXPIRE redis key: `#{key}` does not exist or
-                the timeout could not be set")
+    # if user has received or sent no invitations,
+    # this isn't an error (no need to log... that's pretty heavy)
+    #if retval == 0
+    #  log.warn("failed to EXPIRE redis key: `#{key}` does not exist or
+    #            the timeout could not be set")
 
 updateExpireMiddleware = (req, res, next) ->
   if req.params.user?.username
