@@ -8,7 +8,9 @@ sendNotification = (url, notification, callback) ->
   url = "#{url}/notifications/v1/messages"
   log.info "sending notification",
     url: url
-    notification: notification
+    notification:
+      to: notification.to
+      reason: notification.data?.reason
 
   superagent
     .post(url)
