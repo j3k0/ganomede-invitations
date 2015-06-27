@@ -25,6 +25,7 @@
     "ganomede-helpers": "^0.3.1",
     "jshint": "^2.5.10",
     "mocha": "^2.0.1",
+    "newrelic": "^1.20.2",
     "redis": "^0.12.1",
     "restify": "^2.8.3",
     "superagent": "^0.21.0",

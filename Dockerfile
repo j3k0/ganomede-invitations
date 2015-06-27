@@ -9,11 +9,7 @@ RUN chown -R app /home/app
 USER app
 RUN npm install
 
-COPY .eslintrc /home/app/code/.eslintrc
-COPY .eslintignore /home/app/code/.eslintignore
-COPY coffeelint.json /home/app/code/coffeelint.json
-COPY Makefile /home/app/code/Makefile
-COPY index.js /home/app/code/index.js
+COPY .eslintrc .eslintignore coffeelint.json Makefile index.js newrelic.js /home/app/code/
 COPY tests /home/app/code/tests
 COPY src /home/app/code/src
 

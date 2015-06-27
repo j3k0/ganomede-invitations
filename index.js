@@ -1,5 +1,14 @@
 require('coffee-script/register');
 
+// Use New Relic if LICENSE_KEY has been specified.
+if (process.env.NEW_RELIC_LICENSE_KEY) {
+    if (!process.env.NEW_RELIC_APP_NAME) {
+        var pk = require('./package.json');
+        process.env.NEW_RELIC_APP_NAME = pk.api;
+    }
+    require('newrelic');
+}
+
 var cluster = require("cluster")
 var log = require("./src/log")
 var pkg = require("./package.json");
