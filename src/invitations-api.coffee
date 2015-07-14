@@ -188,6 +188,10 @@ createInvitation = (req, res, next) ->
       type: 'invitation-created'
       data:
         invitation: invitation
+      push:
+        type: "invitation_received"
+        title: [ "Let's Play" ]
+        message: [ "New invitation received from {1}", invitation.from ]
 
     # reply to request
     res.send invitation

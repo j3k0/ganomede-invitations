@@ -21,6 +21,10 @@ Variables available for service configuration.
  * `REDIS_AUTH_PORT_6379_TCP_ADDR` - IP of the AuthDB redis
  * `REDIS_AUTH_PORT_6379_TCP_PORT` - Port of the AuthDB redis
 
+ * `API_SECRET` - For sending notifications
+ * `NOTIFICATIONS_PORT_8080_TCP_ADDR` - IP of the Notifications service
+ * `NOTIFICATIONS_PORT_8080_TCP_PORT` - Port of the Notifications service
+
 InvitationDB
 ------------
 
