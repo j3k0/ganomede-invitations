@@ -287,12 +287,24 @@ initialize = (options={}) ->
   else
     sendNotification = () -> # no-op
 
+addRoutesAs = (server, routes, middlewares...) ->
+  for own method, endpoint of routes
+    server[method].apply server, [ endpoint ].concat middlewares
+
+addDel = (server, endpoint, middlewares...) ->
+  addRoutesAs.apply @, [server, {
+    del:  "#{endpoint}"
+    post: "#{endpoint}/delete"
+  }].concat middlewares
+
 addRoutes = (prefix, server) ->
   endpoint = "/#{prefix}/auth/:authToken/invitations"
   server.get endpoint, authMiddleware, listInvitations, updateExpireMiddleware
   server.post endpoint, authMiddleware, createInvitation, updateExpireMiddleware
-  server.del "#{endpoint}/:invitationId", authMiddleware,
+  addDel server, "#{endpoint}/:invitationId", authMiddleware,
     findInvitationMiddleware, deleteInvitation, updateExpireMiddleware
+  #server.del "#{endpoint}/:invitationId", authMiddleware,
+  #  findInvitationMiddleware, deleteInvitation, updateExpireMiddleware
 
 # Export the module
 module.exports =

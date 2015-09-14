@@ -136,3 +136,10 @@ After deletion is successful, the invitation is removed from database (for the t
 
 ### response [401] Unauthorized
 
+### Alternative endpoint
+
+Deleting an invitation can also be done using `POST` at the following endpoint:
+
+    /invitations/v1/auth/:authToken/invitations/:id/delete
+
+This endpoint has the exact same behaviour as the above documented DELETE.. It's useful for platforms that do not support the DELETE method.

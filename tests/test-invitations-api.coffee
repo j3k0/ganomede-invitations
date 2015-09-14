@@ -179,104 +179,116 @@ describe "invitations-api", ->
         .end expect401(done)
 
   describe 'DEL: Delete invitation', () ->
+
+    withoutError = (cb) ->
+      (err, res) ->
+        assert.ok !err
+        cb(res)
+
     add = (token, invitation, cb) ->
       superagent.agent()
         .post endpoint(token)
         .send invitation
-        .end (err, res) ->
-          assert.ok !err
-          cb(res)
+        .end withoutError cb
 
-    del = (id, token, reason, cb) ->
+    delWithDel = (id, token, reason, cb) ->
       superagent.agent()
         .del "#{endpoint(token)}/#{id}"
-        .send
-          reason: reason
-        .end (err, res) ->
-          assert.ok !err
-          cb(res)
+        .send reason: reason
+        .end withoutError cb
 
-    it 'deleting non-existent invitation ID must result in HTTP 404', (done) ->
-      del 'nonexistentid', data.authTokens.valid, '', (res) ->
-        assert.equal 404, res.status
-        assert.equal 'NotFoundError', res.body.code
-        done()
+    delWithPost = (id, token, reason, cb) ->
+      superagent.agent()
+        .post "#{endpoint(token)}/#{id}/delete"
+        .send reason: reason
+        .end withoutError cb
 
-    it 'should reject unauthenitacted users with HTTP 401', (done) ->
-      del 'nonexistentid', data.authTokens.invalid, '', (res) ->
-        assert.equal 401, res.status
-        assert.equal 'UnauthorizedError', res.body.code
-        done()
+    testUsing = (desc, del) ->
 
-    it 'should not accept delete request with bad reason field', (done) ->
-      invitationId = null
-
-      go = () ->
-        add data.authTokens.valid, data.invitation, (res) ->
-          assert.equal 200, res.status,
-          assert.ok res.body.id
-          invitationId = res.body.id
-
-          vasync.parallel
-            funcs: [
-              delAs.bind null, data.authTokens.valid, 'accept' # from user
-              delAs.bind null, data.authTokens.to, 'cancel' # to user
-              delAs.bind null, data.authTokens.valid, '' # no reason specified
-            ]
-            ,
-            done
-
-      badRequest = (cb) ->
-        (res) ->
-          assert.equal 400, res.status
-          assert.equal 'InvalidContent', res.body.code
-          cb()
-
-      delAs = (token, reason, cb) ->
-        del invitationId, token, reason, badRequest(cb)
-
-      go()
-
-    it 'should not delete invitations unless user is participant', (done) ->
-      # add invite from first user to second
-      # try to delete as third user
-      add data.authTokens.valid, data.invitation, (res) ->
-        assert.equal 200, res.status
-        assert.ok res.body.id
-
-        del res.body.id, data.authTokens.random1, 'reason', (res) ->
-          assert.equal 403, res.status
-          assert.equal 'ForbiddenError', res.body.code
+      it desc + 'results in HTTP 404 for non-existent invitation ID', (done) ->
+        del 'nonexistentid', data.authTokens.valid, '', (res) ->
+          assert.equal 404, res.status
+          assert.equal 'NotFoundError', res.body.code
           done()
 
-    it "should let authenticated users delete their invitations", (done) ->
-      deleteNewInvite = (deleteToken, reason, _, next) ->
+      it desc + 'should reject unauthenitacted users with HTTP 401', (done) ->
+        del 'nonexistentid', data.authTokens.invalid, '', (res) ->
+          assert.equal 401, res.status
+          assert.equal 'UnauthorizedError', res.body.code
+          done()
+
+      it desc + 'should refuse requests with bad reason field', (done) ->
+        invitationId = null
+
+        go = () ->
+          add data.authTokens.valid, data.invitation, (res) ->
+            assert.equal 200, res.status,
+            assert.ok res.body.id
+            invitationId = res.body.id
+
+            vasync.parallel
+              funcs: [
+                delAs.bind null, data.authTokens.valid, 'accept' # from user
+                delAs.bind null, data.authTokens.to, 'cancel' # to user
+                delAs.bind null, data.authTokens.valid, '' # no reason specified
+              ]
+              ,
+              done
+
+        badRequest = (cb) ->
+          (res) ->
+            assert.equal 400, res.status
+            assert.equal 'InvalidContent', res.body.code
+            cb()
+
+        delAs = (token, reason, cb) ->
+          del invitationId, token, reason, badRequest(cb)
+
+        go()
+
+      it desc + 'should delete invitations only for participants', (done) ->
+        # add invite from first user to second
+        # try to delete as third user
         add data.authTokens.valid, data.invitation, (res) ->
           assert.equal 200, res.status
           assert.ok res.body.id
 
-          del res.body.id, deleteToken, reason, (res) ->
-            assert.equal 204, res.status
-            ensureDeleted(deleteToken, next)
+          del res.body.id, data.authTokens.random1, 'reason', (res) ->
+            assert.equal 403, res.status
+            assert.equal 'ForbiddenError', res.body.code
+            done()
 
-      ensureDeleted = (deleteToken, next) ->
-        superagent
-          .get endpoint(data.authTokens.valid)
-          .end (err, res) ->
-            assert.ok !err
+      it desc + "should let users delete their invitations", (done) ->
+        deleteNewInvite = (deleteToken, reason, _, next) ->
+          add data.authTokens.valid, data.invitation, (res) ->
             assert.equal 200, res.status
-            assert.ok Array.isArray(res.body)
-            assert.equal 0, res.body.length
-            next()
+            assert.ok res.body.id
 
-      vasync.pipeline
-        funcs: [
-          deleteNewInvite.bind(null, data.authTokens.valid, 'cancel')
-          deleteNewInvite.bind(null, data.authTokens.to, 'accept')
-          deleteNewInvite.bind(null, data.authTokens.to, 'refuse')
-        ]
-        ,
-        done
+            del res.body.id, deleteToken, reason, (res) ->
+              assert.equal 204, res.status
+              ensureDeleted(deleteToken, next)
+
+        ensureDeleted = (deleteToken, next) ->
+          superagent
+            .get endpoint(data.authTokens.valid)
+            .end (err, res) ->
+              assert.ok !err
+              assert.equal 200, res.status
+              assert.ok Array.isArray(res.body)
+              assert.equal 0, res.body.length
+              next()
+
+        vasync.pipeline
+          funcs: [
+            deleteNewInvite.bind(null, data.authTokens.valid, 'cancel')
+            deleteNewInvite.bind(null, data.authTokens.to, 'accept')
+            deleteNewInvite.bind(null, data.authTokens.to, 'refuse')
+          ]
+          ,
+          done
+
+    testUsing "[del] ", delWithDel
+    testUsing "[post] ", delWithPost
 
   #
   # TTL
