@@ -8,12 +8,13 @@
   "scripts": {
     "start": "./node_modules/.bin/forever start index.js",
     "stop": "./node_modules/.bin/forever stop index.js",
-    "test": "make test"
+    "test": "API_SECRET=42 make test",
+    "testw": "API_SECRET=42 make testw"
   },
   "author": "Jean-Christophe Hoelt <hoelt@fovea.cc>",
   "license": "Private",
   "dependencies": {
-    "authdb": "^0.2.0",
+    "authdb": "github:elmigranto/node-authdb#v1",
     "blanket": "^1.1.6",
     "bunyan": "^1.2.3",
     "coffee-script": "^1.8.0",
@@ -22,7 +23,7 @@
     "eslint": "^0.10.0",
     "fakeredis": "^0.3.0",
     "forever": "^0.13.0",
-    "ganomede-helpers": "^0.3.1",
+    "ganomede-helpers": "^1.0.0-beta2",
     "jshint": "^2.5.10",
     "mocha": "^2.0.1",
     "newrelic": "^1.20.2",

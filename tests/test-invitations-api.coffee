@@ -2,9 +2,11 @@ assert = require "assert"
 restify = require 'restify'
 vasync = require 'vasync'
 superagent = require 'superagent'
+authdb = require 'authdb'
 api = require "../src/invitations-api"
 fakeRedis = require "fakeredis"
-fakeAuthdb = require "./fake-authdb"
+expect = require 'expect.js'
+authdb = require 'authdb'
 
 PREFIX = 'invitations/v1'
 
@@ -12,7 +14,6 @@ describe "invitations-api", ->
 
   server = null
   redis = null
-  authdb = null
   i = 0
 
   # some sample data
@@ -54,19 +55,33 @@ describe "invitations-api", ->
     # Setup mock implementation of other modules
     server = restify.createServer()
     redis = fakeRedis.createClient("test-invitations-#{i}")
-    authdb = fakeAuthdb.createClient()
-    api.initialize
-      authdbClient: authdb
+    redisAuth = fakeRedis.createClient("test-authdb-#{i}")
+    authdbClient = authdb.createClient({redisClient: redisAuth})
+    api.initialize({
+      authdbClient,
       redisClient: redis
       sendNotification: fakeSendNotification.bind(null, 'http://fake.com/path')
-
-    authdb.addAccount data.authTokens.valid, username: data.usernames.from
-    authdb.addAccount data.authTokens.random1, username: data.usernames.random1
-    authdb.addAccount data.authTokens.to, username: data.usernames.to
+    })
 
     server.use(restify.bodyParser())
     api.addRoutes(PREFIX, server)
-    server.listen(1337, done)
+
+    addAuthdbAccount = (token, username) ->
+      authdbClient.addAccount.bind(
+        authdbClient,
+        token,
+        {username}
+      )
+
+    vasync.parallel
+      funcs: [
+        addAuthdbAccount data.authTokens.valid, data.usernames.from
+        addAuthdbAccount data.authTokens.random1, data.usernames.random1
+        addAuthdbAccount data.authTokens.to, data.usernames.to
+        (cb) -> server.listen(1337, cb)
+      ]
+      ,
+      done
 
   afterEach (done) ->
     server.close()
@@ -177,6 +192,15 @@ describe "invitations-api", ->
       superagent
         .get endpoint(data.authTokens.invalid)
         .end expect401(done)
+
+    it 'should allow auth via API_SECRET.username', (done) ->
+      token = "#{process.env.API_SECRET}.#{data.usernames.from}"
+      superagent
+        .get endpoint(token)
+        .end (err, res) ->
+          expect(err).to.be(null)
+          expect(res.status).to.be(200)
+          done(err)
 
   describe 'DEL: Delete invitation', () ->
 

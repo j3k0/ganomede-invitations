@@ -7,6 +7,7 @@ crypto = require 'crypto'
 SendNotification = require './send-notification'
 pkg = require '../package.json'
 ServiceEnv = require './service-env'
+helpers = require 'ganomede-helpers'
 
 redisClient = null
 authdbClient = null
@@ -17,19 +18,6 @@ REDIS_TTL_SECONDS = 15 * 24 * 3600 # 15 days
 sendError = (err, next) ->
   log.error err
   next err
-
-# Populates req.params.user with value returned from authDb.getAccount()
-authMiddleware = (req, res, next) ->
-  authToken = req.params.authToken
-  if !authToken
-    return sendError(new restify.InvalidContentError('invalid content'), next)
-
-  authdbClient.getAccount authToken, (err, account) ->
-    if err || !account
-      return sendError(new restify.UnauthorizedError('not authorized'), next)
-
-    req.params.user = account
-    next()
 
 # Sets EXPIRE of Redis-stored invitations to REDIS_TTL_SECONDS
 expire = (key) ->
@@ -299,9 +287,22 @@ addDel = (server, endpoint, middlewares...) ->
 
 addRoutes = (prefix, server) ->
   endpoint = "/#{prefix}/auth/:authToken/invitations"
-  server.get endpoint, authMiddleware, listInvitations, updateExpireMiddleware
-  server.post endpoint, authMiddleware, createInvitation, updateExpireMiddleware
-  addDel server, "#{endpoint}/:invitationId", authMiddleware,
+
+  # All requests must be authorized.
+  authMiddleware = helpers.restify.middlewares.authdb.create({
+    authdbClient,
+    secret: process.env.API_SECRET
+  })
+  server.use (req, res, next) ->
+    authorize = req.route.path.startsWith(endpoint)
+    if (authorize)
+      authMiddleware req, res, next
+    else
+      next()
+
+  server.get endpoint, listInvitations, updateExpireMiddleware
+  server.post endpoint, createInvitation, updateExpireMiddleware
+  addDel server, "#{endpoint}/:invitationId",
     findInvitationMiddleware, deleteInvitation, updateExpireMiddleware
   #server.del "#{endpoint}/:invitationId", authMiddleware,
   #  findInvitationMiddleware, deleteInvitation, updateExpireMiddleware

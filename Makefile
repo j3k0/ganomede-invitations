@@ -9,6 +9,9 @@ check: install
 test: check
 	./node_modules/.bin/mocha -b --compilers coffee:coffee-script/register tests | ./node_modules/.bin/bunyan -l ${BUNYAN_LEVEL}
 
+testw:
+	./node_modules/.bin/mocha --watch -b --compilers coffee:coffee-script/register tests | ./node_modules/.bin/bunyan -l ${BUNYAN_LEVEL}
+
 coverage: test
 	@mkdir -p doc
 	./node_modules/.bin/mocha -b --compilers coffee:coffee-script/register --require blanket -R html-cov tests | ./node_modules/.bin/bunyan -l ${BUNYAN_LEVEL} > doc/coverage.html
