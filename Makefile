@@ -32,5 +32,18 @@ node_modules: package.json
 	npm install
 	@touch node_modules
 
+docker-prepare:
+	@mkdir -p doc
+	docker-compose up -d --no-recreate authRedis redis
+
+docker-run: docker-prepare
+	docker-compose run --rm app make run BUNYAN_LEVEL=${BUNYAN_LEVEL}
+
+docker-test: docker-prepare
+	docker-compose run --rm -e API_SECRET=1234 app make test BUNYAN_LEVEL=${BUNYAN_LEVEL}
+
+docker-coverage: docker-prepare
+	docker-compose run --rm -e API_SECRET=1234 app make coverage
+
 clean:
 	rm -fr node_modules

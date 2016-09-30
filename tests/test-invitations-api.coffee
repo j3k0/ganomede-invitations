@@ -102,7 +102,7 @@ describe "invitations-api", ->
             assert.equal data.usernames.from, JSON.parse(reply).from
             done()
 
-    it "should reject unauthenitacted users with HTTP 401", (done) ->
+    it "should reject unauthenticated users with HTTP 401", (done) ->
       superagent
         .post endpoint(data.authTokens.invalid)
         .send data.invitation

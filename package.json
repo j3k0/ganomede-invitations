@@ -15,22 +15,22 @@
   "license": "Private",
   "dependencies": {
     "authdb": "^0.3.0",
-    "blanket": "^1.1.6",
-    "bunyan": "^1.2.3",
+    "blanket": "^1.1.10",
+    "bunyan": "^1.2.4",
     "coffee-script": "^1.8.0",
     "coffeelint": "^1.6.1",
-    "concat-stream": "^1.4.7",
-    "eslint": "^0.10.0",
-    "fakeredis": "^0.3.0",
+    "concat-stream": "^1.4.10",
+    "eslint": "^0.10.2",
+    "fakeredis": "^0.3.4",
     "forever": "^0.13.0",
     "ganomede-helpers": "^1.0.1",
-    "jshint": "^2.5.10",
+    "jshint": "^2.5.11",
     "mocha": "^2.0.1",
     "newrelic": "^1.20.2",
     "redis": "^0.12.1",
-    "restify": "^2.8.3",
+    "restify": "^2.8.5",
     "superagent": "^0.21.0",
-    "vasync": "^1.6.2"
+    "vasync": "^1.6.4"
   },
   "config": {
     "blanket": {
