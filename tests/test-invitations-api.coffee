@@ -10,6 +10,13 @@ authdb = require 'authdb'
 
 PREFIX = 'invitations/v1'
 
+createRedisClient = (idString, alwaysFake = false) ->
+  fake = alwaysFake || !process.env.REAL_REDIS
+  if fake
+    fakeRedis.createClient(idString)
+  else
+    require('redis').createClient()
+
 describe "invitations-api", ->
 
   server = null
@@ -54,8 +61,8 @@ describe "invitations-api", ->
 
     # Setup mock implementation of other modules
     server = restify.createServer()
-    redis = fakeRedis.createClient("test-invitations-#{i}")
-    redisAuth = fakeRedis.createClient("test-authdb-#{i}")
+    redis = createRedisClient("test-invitations-#{i}")
+    redisAuth = createRedisClient("test-authdb-#{i}", true)
     authdbClient = authdb.createClient({redisClient: redisAuth})
     api.initialize({
       authdbClient,
