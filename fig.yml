@@ -1,6 +1,5 @@
 app:
     build: .
-    command: make BUNYAN_LEVEL=0 run
     ports:
      - "8000:8000"
     links:
@@ -8,11 +7,7 @@ app:
      - "authRedis:redis_auth"
 
 redis:
-    image: tutum/redis:latest
-    environment:
-     - "REDIS_PASS=**None**"
+    image: redis:alpine
 
 authRedis:
-    image: tutum/redis:latest
-    environment:
-     - "REDIS_PASS=**None**"
+    image: redis:alpine
