@@ -180,6 +180,8 @@ createInvitation = (req, res, next) ->
         app: invitation.type
         title: [ "invitation_received_title" ]
         message: [ "invitation_received_message", invitation.from ]
+        # Tell notifier to fetch "name" from "userId"
+        messageArgsTypes: [ 'username' ]
 
     # reply to request
     res.send invitation

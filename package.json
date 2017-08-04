@@ -20,7 +20,7 @@
     "coffee-script": "^1.8.0",
     "coffeelint": "^1.6.1",
     "concat-stream": "^1.4.10",
-    "eslint": "^0.10.2",
+    "eslint": "^4.3.0",
     "fakeredis": "^0.3.4",
     "forever": "^0.13.0",
     "ganomede-helpers": "^1.0.1",
