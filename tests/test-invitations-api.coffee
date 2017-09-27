@@ -1,3 +1,4 @@
+lodash = require 'lodash'
 assert = require "assert"
 restify = require 'restify'
 vasync = require 'vasync'
@@ -7,6 +8,7 @@ api = require "../src/invitations-api"
 fakeRedis = require "fakeredis"
 expect = require 'expect.js'
 authdb = require 'authdb'
+td = require 'testdouble'
 
 PREFIX = 'invitations/v1'
 
@@ -34,8 +36,8 @@ describe "invitations-api", ->
       type: "triominos/v1",
       to: "valid-username"
 
-  fakeSendNotification = () ->
-    # console.log 'fakeSendNotification(%j)', arguments
+  fakeSendNotificationUrl = 'http://notifications.ganomede/add'
+  fakeSendNotification = td.function('.fakeSendNotification()')
 
   endpoint = (token) ->
     host = "http://localhost:#{server.address().port}"
@@ -60,7 +62,7 @@ describe "invitations-api", ->
     api.initialize({
       authdbClient,
       redisClient: redis
-      sendNotification: fakeSendNotification.bind(null, 'http://fake.com/path')
+      sendNotification: fakeSendNotification.bind(null, fakeSendNotificationUrl)
     })
 
     server.use(restify.bodyParser())
@@ -84,6 +86,7 @@ describe "invitations-api", ->
       done
 
   afterEach (done) ->
+    td.reset()
     server.close()
     server.once('close', redis.flushdb.bind(redis, done))
 
@@ -134,6 +137,50 @@ describe "invitations-api", ->
         inputs: badInvites
         ,
         done
+
+    it 'Sends notification to ganomede-notificaions', (done) ->
+      superagent
+        .post endpoint(data.authTokens.valid)
+        .send data.invitation
+        .end (err, res) ->
+          expect(err).to.be(null)
+
+          matchPush = td.matchers.argThat (arg) ->
+            # Good basics
+            expect(lodash.pick(arg, 'from', 'to', 'type')).to.eql({
+              from: 'invitations/v1',
+              to: 'valid-username',
+              type: 'invitation-created'
+            })
+
+            # data.invitation is correct
+            expect(arg).to.have.property('data')
+            expect(arg.data).to.have.property('invitation')
+            expect(arg.data.invitation).to.have.property('id')
+            # For some reason, coffee `class` makes methods show up
+            # when comparing with `.to.eql()`, so Object.assign() that out
+            # and only account for enumerables.
+            enumerablesOfInitvation = Object.assign({}, arg.data.invitation)
+            expect(lodash.omit(enumerablesOfInitvation, 'id')).to.eql({
+              from: 'some-username',
+              to: 'valid-username',
+              gameId: '0123456789abcdef012345',
+              type: 'triominos/v1'
+            })
+
+            # has push with nice *ArgsTypes
+            expect(arg).to.have.property('push')
+            expect(arg.push).to.eql({
+              app: 'triominos/v1',
+              title: ['invitation_received_title'],
+              message: ['invitation_received_message', 'some-username'],
+              messageArgsTypes: ['directory:name']
+            })
+
+            return true
+
+          td.verify(fakeSendNotification(fakeSendNotificationUrl, matchPush))
+          done()
 
   #
   # List user invitations
