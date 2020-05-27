@@ -3,8 +3,8 @@
  * DS102: Remove unnecessary code created because of implicit returns
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
  */
-const expect = require('expect.js');
-const api = require('../src/invitations-api');
+import expect from 'expect.js';
+import api from '../src/invitations-api';
 
 const {
   Invitation

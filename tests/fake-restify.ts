@@ -17,17 +17,17 @@ class Res {
   }
 }
 
-class Server {
-  routes: {
+export class Server {
+  public routes: {
     get: {[url:string]: Function};
     head: {[url:string]: Function};
     put: {[url:string]: Function};
     post: {[url:string]: Function};
     del: {[url:string]: Function};
   }
-  res?: Res;
+  public res?: Res;
   
-  constructor() {
+  public constructor() {
     this.routes = {
       get: {},
       head: {},
@@ -36,30 +36,30 @@ class Server {
       del: {}
     };
   }
-  get(url, callback) {
+  public get(url, callback) {
     return this.routes.get[url] = callback;
   }
-  head(url, callback) {
+  public head(url, callback) {
     return this.routes.head[url] = callback;
   }
-  put(url, callback) {
+  public put(url, callback) {
     return this.routes.put[url] = callback;
   }
-  post(url, callback) {
+  public post(url, callback) {
     return this.routes.post[url] = callback;
   }
-  del(url, callback) {
+  public del(url, callback) {
     return this.routes.del[url] = callback;
   }
 
-  request(type, url, req, callback) {
+  public request(type: string, url: string, req, callback?: (res: Res) => void) {
     const res = (this.res = new Res);
     const next = data => {
       if (data) {
         res.status = data.statusCode || 500;
         res.send(data.body);
       }
-      return (typeof callback === 'function' ? callback(res) : undefined);
+      if (typeof callback === 'function') callback(res);
     };
     return this.routes[type][url](req, res, next);
   }

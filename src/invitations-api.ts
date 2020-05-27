@@ -26,8 +26,11 @@ let sendNotification:SendNotificationFunction|null = null;
 const REDIS_TTL_SECONDS = 15 * 24 * 3600; // 15 days
 
 const sendError = function(err, next) {
-  log.error(err);
-  return next(err);
+  log.warn({err}, 'request failed');
+  if (['NotFound', 'Unauthorized', 'Forbidden'].indexOf(err?.body?.code) >= 0)
+    err.body.code += 'Error';
+  log.warn({err}, 'request failed');
+  return next(err) ;
 };
 
 // Sets EXPIRE of Redis-stored invitations to REDIS_TTL_SECONDS

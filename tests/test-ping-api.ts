@@ -6,8 +6,8 @@
 import * as assert from "assert";
 import pingApi from "../src/ping-api";
 
-import fakeRestify from "./fake-restify";
-const server = fakeRestify.createServer();
+import {Server} from "./fake-restify";
+const server = new Server();
 
 describe("ping-api", function() {
 
@@ -20,9 +20,9 @@ describe("ping-api", function() {
 
   return it("should reply to a ping with a pong", function() {
     server.request("get", "/users/ping/:token", {params: {token: "pop"}});
-    assert.equal(server.res.body, "pong/pop");
+    assert.equal(server.res!.body, "pong/pop");
     server.request("head", "/users/ping/:token", {params: {token: "beep"}});
-    return assert.equal(server.res.body, "pong/beep");
+    return assert.equal(server.res!.body, "pong/beep");
   });
 });
 

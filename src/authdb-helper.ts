@@ -48,7 +48,9 @@ export default {
               token: authToken
             });
           }
-          return next(new restifyErrors.UnauthorizedError('not authorized'));
+          const authErr = new restifyErrors.UnauthorizedError('not authorized');
+          authErr.body.code = 'UnauthorizedError'; // legacy error code, we want to keep compatibility
+          return next(authErr);
         }
         req.params.user = account;
         return next();
