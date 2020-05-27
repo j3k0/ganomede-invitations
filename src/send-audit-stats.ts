@@ -4,7 +4,8 @@
 
 'use strict';
 
-const stats = require('./statsd-wrapper').createClient();
+import statsWrapper from './statsd-wrapper';
+const stats = statsWrapper.createClient();
 
 const cleanupStatsKey = (key) => key.replace(/[-.]/g, '_').toLowerCase();
 
@@ -31,4 +32,4 @@ const sendAuditStats = (req, res, next) => {
   }
 };
 
-module.exports = sendAuditStats;
+export default sendAuditStats;

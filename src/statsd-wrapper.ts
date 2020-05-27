@@ -1,7 +1,8 @@
 'use strict';
 
-const logMod = require('./log');
+import logMod from './log';
 const StatsD = require('node-statsd');
+
 const dummyClient = () => {
   return {
     increment: function () {},
@@ -24,8 +25,8 @@ const missingEnv = () => {
   }
 };
 
-const createClient = function (arg) {
-  const log = arg ? arg.log : logMod.child({
+const createClient = function (arg?) {
+  const log = arg?.log || logMod.child({
     module: 'statsd'
   });
   if (missingEnv()) {
@@ -43,7 +44,7 @@ const createClient = function (arg) {
   return client;
 };
 
-module.exports = {
+export default {
   createClient: createClient,
   dummyClient: dummyClient
 };

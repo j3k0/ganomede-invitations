@@ -1,1 +1,18 @@
-fig.yml
+app:
+    build: .
+    command: sh -c "node build/src/index.js | npx bunyan"
+    ports:
+     - "8000:8000"
+    links:
+     - "redis:redis_invitations"
+     - "authRedis:redis_auth"
+    environment:
+     - "API_SECRET=1234"
+    volumes:
+     - "./build:/home/app/code/build"
+
+redis:
+    image: redis:alpine
+
+authRedis:
+    image: redis:alpine

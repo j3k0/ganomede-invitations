@@ -1,19 +1,11 @@
-require('coffee-script/register');
+import 'source-map-support/register';
+import cluster from "cluster";
+import log from "./log";
+import pkg = require("../package.json");
+import main from "./main";
+import Server from './server';
 
-// Use New Relic if LICENSE_KEY has been specified.
-if (process.env.NEW_RELIC_LICENSE_KEY) {
-    if (!process.env.NEW_RELIC_APP_NAME) {
-        var pk = require('./package.json');
-        process.env.NEW_RELIC_APP_NAME = pk.api;
-    }
-    require('newrelic');
-}
-
-var cluster = require("cluster")
-var log = require("./src/log")
-var pkg = require("./package.json");
-
-var port = +process.env.PORT || 8000;
+var port = parseInt(process.env.PORT || "8000");
 var routePrefix = process.env.ROUTE_PREFIX || pkg.api;
 
 if (cluster.isMaster) {
@@ -29,9 +21,8 @@ if (cluster.isMaster) {
 else {
 
     // worker
-    var restify = require("restify");
-    var main = require("./src/main");
-    var server = require('./src/server').createServer();
+    // var restify = require("restify");
+    const server = Server.createServer();
 
     // Intitialize backend, add routes
     main.initialize();

@@ -1,23 +1,28 @@
-FROM node:6-slim
+FROM node:12
+WORKDIR /home/app/code
+COPY package.json .
+RUN npm install
+COPY tsconfig.json .
+COPY src src
+RUN npm run build
 
-EXPOSE 8000
+FROM node:12-slim
+WORKDIR /home/app/code
 MAINTAINER Jean-Christophe Hoelt <hoelt@fovea.cc>
+EXPOSE 8000
+ENV NODE_ENV=production
 
 # Create 'app' user
 RUN useradd app -d /home/app
 
 # Install NPM packages
-COPY package.json /home/app/code/package.json
-RUN cd /home/app/code && npm install --production
+COPY package.json .
+RUN npm install --production
 
 # Copy app source files
-COPY .eslintrc .eslintignore coffeelint.json Makefile index.js newrelic.js /home/app/code/
-COPY tests /home/app/code/tests
-COPY src /home/app/code/src
+COPY src src
+COPY --from=0 /home/app/code/build build
 RUN chown -R app /home/app
 
 USER app
-WORKDIR /home/app/code
-CMD node index.js
-
-ENV NODE_ENV=production
+CMD npm start
