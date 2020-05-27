@@ -22,7 +22,6 @@
     "eslint": "^4.3.0",
     "fakeredis": "^0.3.4",
     "forever": "^3.0.0",
-    "ganomede-helpers": "^1.0.1",
     "mocha": "^7.2.0",
     "node-statsd": "^0.1.1",
     "redis": "^3.0.2",

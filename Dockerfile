@@ -1,12 +1,13 @@
 FROM node:12
 WORKDIR /home/app/code
 COPY package.json .
+COPY package-lock.json .
 RUN npm install
 COPY tsconfig.json .
 COPY src src
 RUN npm run build
 
-FROM node:12-slim
+FROM node:12
 WORKDIR /home/app/code
 MAINTAINER Jean-Christophe Hoelt <hoelt@fovea.cc>
 EXPOSE 8000
@@ -17,6 +18,7 @@ RUN useradd app -d /home/app
 
 # Install NPM packages
 COPY package.json .
+COPY package-lock.json .
 RUN npm install --production
 
 # Copy app source files
