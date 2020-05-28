@@ -400,6 +400,35 @@ describe("invitations-api", function() {
   });
 
   //
+  // ANTI-SPAM
+  //
+
+  describe('ANTI-SPAM: Cannot add new invitations until 24h elapsed', function() {
+    it("prevent users to create a new invitation just after refusal", done => {
+      superagent
+      .post(endpoint(data.authTokens.valid))
+      .send(data.invitation)
+      .end(function(err, res) {
+        assert.equal(200, res.status);
+        superagent
+        .del(`${endpoint(data.authTokens.to)}/${res.body.id}`)
+        .send({reason: 'refuse'})
+        .end(function(err, res) {
+          assert.equal(204, res.status);
+          superagent
+          .post(endpoint(data.authTokens.valid))
+          .send(data.invitation)
+          .end(function(err, res) {
+            assert.equal(429, res.status);
+            assert.equal('TooManyRequests', res.body.code);
+            done();
+          });
+        });
+      });
+    });
+  });
+
+  //
   // TTL
   //
 

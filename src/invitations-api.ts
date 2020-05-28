@@ -115,7 +115,19 @@ class Invitation {
     ]
   }, callback);
   }
-    //multi.exec(callback)
+
+  saveTemporaryBan(seconds:number) {
+    const temporaryBanKey = `${this.id}:ban`;
+    redisClient!.set(temporaryBanKey, '1');
+    redisClient!.expire(temporaryBanKey, seconds);
+  }
+
+  hasTemporaryBan(callback: (hasBan: boolean) => void) {
+    const temporaryBanKey = `${this.id}:ban`;
+    redisClient!.get(temporaryBanKey, (err: Error|null, data: string|false|null) => {
+      callback(!err && !!data);
+    });
+  }
 
   static loadFromRedis(id: string, callback: (err?: Error, invitation?:Invitation) => void) {
     return redisClient!.get(id, function(err, json) {
@@ -203,31 +215,37 @@ const createInvitation = function(req, res, next) {
     return sendError(err, next);
   }
 
-  return invitation.saveToRedis(function(err, replies) {
-    if (err) {
-      log.error(err);
-      err = new restifyErrors.InternalError("failed add to database");
+  invitation.hasTemporaryBan(hasBan => {
+    if (hasBan) {
+      const err = new restifyErrors.TooManyRequestsError("too many invitations");
       return sendError(err, next);
     }
+    invitation.saveToRedis(function(err, replies) {
+      if (err) {
+        log.error(err);
+        err = new restifyErrors.InternalError("failed add to database");
+        return sendError(err, next);
+      }
 
-    // send notification
-    if (sendNotification) sendNotification({
-      from: pkg.api,
-      to: invitation.to,
-      type: 'invitation-created',
-      data: {
-        invitation
-      },
-      push: {
-        app: invitation.type,
-        title: [ "invitation_received_title" ],
-        message: [ "invitation_received_message", invitation.from ],
-        messageArgsTypes: [ 'directory:name' ]
-      }});
+      // send notification
+      if (sendNotification) sendNotification({
+        from: pkg.api,
+        to: invitation.to,
+        type: 'invitation-created',
+        data: {
+          invitation
+        },
+        push: {
+          app: invitation.type,
+          title: [ "invitation_received_title" ],
+          message: [ "invitation_received_message", invitation.from ],
+          messageArgsTypes: [ 'directory:name' ]
+        }});
 
-    // reply to request
-    res.send(invitation);
-    return next();
+      // reply to request
+      res.send(invitation);
+      next();
+    });
   });
 };
 
@@ -241,23 +259,20 @@ const listInvitations = (req, res, next) => Invitation.forUsername(req.params.us
   return next();
 });
 
-const deleteInvitation = function(req, res, next) {
-  const {
-    username
-  } = req.params.user;
-  const {
-    invitation
-  } = req.params;
-  const {
-    reason
-  } = req.body;
+const deleteInvitation = function(req: restify.Request, res: restify.Response, next: restify.Next) {
+  const username:string = req.params.user.username;
+  const invitation:Invitation = req.params.invitation;
+  const reason:string = req.body.reason;
 
   const badReason = () => sendError(new restifyErrors.InvalidContentError('invalid reason'), next);
 
-  const del = () => invitation.deleteFromRedis(function(err, replies) {
+  const del = () => invitation.deleteFromRedis(function(err) {
     if (err) {
       log.error(err);
       return sendError(new restifyErrors.InternalError('failed to query db'), next);
+    }
+    if (reason === 'cancel' || reason === 'refuse') {
+      invitation.saveTemporaryBan(6 * 3600);
     }
 
     // send notification
