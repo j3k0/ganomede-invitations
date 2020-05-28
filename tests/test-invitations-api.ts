@@ -419,8 +419,8 @@ describe("invitations-api", function() {
           .post(endpoint(data.authTokens.valid))
           .send(data.invitation)
           .end(function(err, res) {
-            assert.equal(429, res.status);
-            assert.equal('TooManyRequests', res.body.code);
+            assert.equal(200, res.status);
+            assert.equal('TooManyInvitations', res.body.code);
             done();
           });
         });

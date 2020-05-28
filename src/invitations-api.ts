@@ -217,8 +217,13 @@ const createInvitation = function(req, res, next) {
 
   invitation.hasTemporaryBan(hasBan => {
     if (hasBan) {
-      const err = new restifyErrors.TooManyRequestsError("too many invitations");
-      return sendError(err, next);
+      res.send(Object.assign({
+        code: 'TooManyInvitations'
+      }, invitation));
+      delete req.params.invitation;
+      return next();
+      // const err = new restifyErrors.TooManyRequestsError("too many invitations");
+      // return sendError(err, next);
     }
     invitation.saveToRedis(function(err, replies) {
       if (err) {
