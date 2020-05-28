@@ -1,11 +1,3 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * DS203: Remove `|| {}` from converted for-own loops
- * DS205: Consider reworking code to avoid use of IIFEs
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
 import log from "./log";
 import * as authdb from "authdb";
 import * as redis from "redis";
@@ -113,7 +105,6 @@ class Invitation {
     ]
   }, callback);
   }
-    //multi.exec(callback)
 
   deleteFromRedis(callback: (err?: Error) => void) {
     //multi = redisClient.multi()
