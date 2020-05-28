@@ -25,25 +25,32 @@ describe("invitations-api", function() {
   let i = 0;
 
   // some sample data
-  const data = {
-    authTokens: {
-      valid: 'valid-token-12345689',
-      invalid: 'invalid-token-12345689',
-      random1: 'token-random-user-1',
-      to: 'valid-token-userto'
-    },
+  let data = createData();
 
-    usernames: {
-      from: 'some-username',
-      to: 'valid-username',
-      random1: 'random-user-1'
-    },
+  function createData() {
+    const RND_STR = String(Math.random()).split('.')[1].slice(0,8);
+    return {
+      rnd: RND_STR,
 
-    invitation: {
-      gameId: "0123456789abcdef012345",
-      type: "triominos/v1",
-      to: "valid-username"
-    }
+      authTokens: {
+        valid: 'valid-token-12345689-' + RND_STR,
+        invalid: 'invalid-token-12345689-' + RND_STR,
+        random1: 'token-random-user-1-' + RND_STR,
+        to: 'valid-token-userto-' + RND_STR
+      },
+
+      usernames: {
+        from: 'some-username-' + RND_STR,
+        to: 'valid-username-' + RND_STR,
+        random1: 'random-user-' + RND_STR
+      },
+
+      invitation: {
+        gameId: "0123456789abcdef012345" + RND_STR,
+        type: "triominos/v1",
+        to: "valid-username-" + RND_STR
+      }
+    };
   };
 
   const fakeSendNotificationUrl = 'http://notifications.ganomede/add';
@@ -65,6 +72,7 @@ describe("invitations-api", function() {
 
   beforeEach(function(done) {
 
+    data = createData();
     i += 1;
 
     // Setup mock implementation of other modules
@@ -81,11 +89,9 @@ describe("invitations-api", function() {
     server.use(restify.plugins.bodyParser());
     api.addRoutes(PREFIX, server);
 
-    const addAuthdbAccount = (token, username) => authdbClient.addAccount.bind(
-      authdbClient,
-      token,
-      {username}
-    );
+    const addAuthdbAccount = (token, username) => (cb) => {
+      authdbClient.addAccount(token, {username}, cb);
+    }
 
     return vasync.parallel({
       funcs: [
@@ -168,7 +174,7 @@ describe("invitations-api", function() {
           // Good basics
           expect(lodash.pick(arg, 'from', 'to', 'type')).to.eql({
             from: 'invitations/v1',
-            to: 'valid-username',
+            to: data.usernames.to,
             type: 'invitation-created'
           });
 
@@ -181,9 +187,9 @@ describe("invitations-api", function() {
           // and only account for enumerables.
           const enumerablesOfInitvation = Object.assign({}, arg.data.invitation);
           expect(lodash.omit(enumerablesOfInitvation, 'id')).to.eql({
-            from: 'some-username',
-            to: 'valid-username',
-            gameId: '0123456789abcdef012345',
+            from: data.usernames.from,
+            to: data.usernames.to,
+            gameId: data.invitation.gameId,
             type: 'triominos/v1'
           });
 
@@ -192,7 +198,7 @@ describe("invitations-api", function() {
           expect(arg.push).to.eql({
             app: 'triominos/v1',
             title: ['invitation_received_title'],
-            message: ['invitation_received_message', 'some-username'],
+            message: ['invitation_received_message', data.usernames.from],
             messageArgsTypes: ['directory:name']
           });
 
@@ -355,37 +361,38 @@ describe("invitations-api", function() {
         });
       }));
 
-      return it(desc + "should let users delete their invitations", function(done) {
-        const deleteNewInvite = (deleteToken, reason, _, next) => add(data.authTokens.valid, data.invitation, function(res) {
-          assert.equal(200, res.status);
-          assert.ok(res.body.id);
-
-          return del(res.body.id, deleteToken, reason, function(res) {
-            assert.equal(204, res.status);
-            return ensureDeleted(deleteToken, next);
-          });
-        });
-
-        var ensureDeleted = (deleteToken, next) => superagent
-          .get(endpoint(data.authTokens.valid))
-          .end(function(err, res) {
-            assert.ok(!err);
+      function testDelete(tokenKey, reason) {
+        it(desc + "should let users delete their invitations (" + reason + ")", function(done) {
+          const deleteToken = data.authTokens[tokenKey];
+          const deleteNewInvite = (next) => add(data.authTokens.valid, data.invitation, function(res) {
+            assert.equal(undefined, res.body?.code);
             assert.equal(200, res.status);
-            assert.ok(Array.isArray(res.body));
-            assert.equal(0, res.body.length);
-            return next();
-        });
+            assert.ok(res.body.id);
 
-        return vasync.pipeline({
-          funcs: [
-            deleteNewInvite.bind(null, data.authTokens.valid, 'cancel'),
-            deleteNewInvite.bind(null, data.authTokens.to, 'accept'),
-            deleteNewInvite.bind(null, data.authTokens.to, 'refuse')
-          ]
-        }
-          ,
-          done);
-      });
+            del(res.body.id, deleteToken, reason, function(res) {
+              assert.equal(undefined, res.body?.message);
+              assert.equal(undefined, res.body?.code);
+              assert.equal(204, res.status);
+              ensureDeleted(next);
+            });
+          });
+
+          var ensureDeleted = (next) => superagent
+            .get(endpoint(data.authTokens.valid))
+            .end(function(err, res) {
+              assert.ok(!err);
+              assert.equal(200, res.status);
+              assert.ok(Array.isArray(res.body));
+              assert.equal(0, res.body.length);
+              next();
+          });
+
+          deleteNewInvite(done);
+        });
+      };
+      testDelete('valid', 'cancel');
+      testDelete('to', 'accept');
+      testDelete('to', 'refuse');
     };
 
     testUsing("[del] ", delWithDel);
