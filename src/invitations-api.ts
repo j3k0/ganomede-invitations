@@ -116,17 +116,18 @@ class Invitation {
   }, callback);
   }
 
-  saveTemporaryBan(seconds:number) {
-    const temporaryBanKey = `${this.id}:ban`;
-    redisClient!.set(temporaryBanKey, '1');
-    redisClient!.expire(temporaryBanKey, seconds);
+  saveTemporaryBan(_req: restify.Request, _seconds: number) {
+    // const temporaryBanKey = `${this.id}:ban`;
+    // redisClient!.set(temporaryBanKey, '1');
+    // redisClient!.expire(temporaryBanKey, seconds);
   }
 
-  hasTemporaryBan(callback: (hasBan: boolean) => void) {
-    const temporaryBanKey = `${this.id}:ban`;
-    redisClient!.get(temporaryBanKey, (err: Error|null, data: string|false|null) => {
-      callback(!err && !!data);
-    });
+  hasBan(callback: (hasBan: boolean) => void) {
+    callback(false);
+    // const temporaryBanKey = `${this.id}:ban`;
+    // redisClient!.get(temporaryBanKey, (err: Error|null, data: string|false|null) => {
+    //   callback(!err && !!data);
+    // });
   }
 
   static loadFromRedis(id: string, callback: (err?: Error, invitation?:Invitation) => void) {
@@ -215,7 +216,7 @@ const createInvitation = function(req, res, next) {
     return sendError(err, next);
   }
 
-  invitation.hasTemporaryBan(hasBan => {
+  invitation.hasBan(hasBan => {
     if (hasBan) {
       res.send(Object.assign({
         code: 'TooManyInvitations'
@@ -277,7 +278,11 @@ const deleteInvitation = function(req: restify.Request, res: restify.Response, n
       return sendError(new restifyErrors.InternalError('failed to query db'), next);
     }
     if (reason === 'cancel' || reason === 'refuse') {
-      invitation.saveTemporaryBan(6 * 3600);
+      req.log.info({
+        from: invitation.from,
+        to: invitation.to
+      }, 'invitation canceled');
+      invitation.saveTemporaryBan(req, 6 * 3600);
     }
 
     // send notification

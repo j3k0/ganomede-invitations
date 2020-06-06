@@ -399,7 +399,7 @@ describe("invitations-api", function() {
     testUsing("[post] ", delWithPost);
   });
 
-  //
+  /*
   // ANTI-SPAM
   //
 
@@ -427,6 +427,7 @@ describe("invitations-api", function() {
       });
     });
   });
+  */
 
   //
   // TTL
