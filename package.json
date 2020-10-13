@@ -1,6 +1,6 @@
 {
   "name": "invitations",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "api": "invitations/v1",
   "description": "invitations micro service",
   "private": true,
