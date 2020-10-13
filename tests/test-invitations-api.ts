@@ -10,7 +10,7 @@ import * as restify from 'restify';
 import * as vasync from 'vasync';
 import * as superagent from 'superagent';
 import api from "../src/invitations-api";
-import * as fakeRedis from "fakeredis";
+import fakeRedis from "fakeredis";
 import expect from 'expect.js';
 import * as authdb from 'authdb';
 import * as td from 'testdouble';
@@ -21,6 +21,8 @@ describe("invitations-api", function() {
 
   let server: restify.Server = restify.createServer();
   let redis = fakeRedis.createClient(`test-invitations-init`);
+  let usermetadbClient = fakeRedis.createClient(`test-usermeta-init`);
+  fakeRedis.fast = true;
 
   let i = 0;
 
@@ -80,8 +82,10 @@ describe("invitations-api", function() {
     redis = fakeRedis.createClient(`test-invitations-${i}`);
     const redisAuth = fakeRedis.createClient(`test-authdb-${i}`);
     const authdbClient = authdb.createClient({redisClient: redisAuth});
+    usermetadbClient = fakeRedis.createClient(`test-usermeta-${i}`);
     api.initialize({
       authdbClient,
+      usermetadbClient,
       redisClient: redis,
       sendNotification: fakeSendNotification.bind(null, fakeSendNotificationUrl)
     });
