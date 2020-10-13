@@ -6,7 +6,7 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "node build/src/index.js",
+    "start": "node -r source-map-support/register build/src/index.js",
     "build": "tsc",
     "buildw": "tsc -w",
     "debug": "API_SECRET=42 nodemon --exec \" ts-node src/index.ts\" -w src -e ts | bunyan -o short --color",
