@@ -20,7 +20,9 @@ Variables available for service configuration.
  * `REDIS_INVITATIONS_PORT_6379_TCP_PORT` - Port of the InvitationsDB redis
  * `REDIS_AUTH_PORT_6379_TCP_ADDR` - IP of the AuthDB redis
  * `REDIS_AUTH_PORT_6379_TCP_PORT` - Port of the AuthDB redis
-
+ * `REDIS_USERMETA_PORT_6379_TCP_ADDR` - IP of the UsermetaDB redis
+ * `REDIS_USERMETA_PORT_6379_TCP_PORT` - Port of the UsermetaDB redis
+ 
  * `API_SECRET` - For sending notifications
  * `NOTIFICATIONS_PORT_8080_TCP_ADDR` - IP of the Notifications service
  * `NOTIFICATIONS_PORT_8080_TCP_PORT` - Port of the Notifications service
@@ -39,6 +41,15 @@ AuthDB
 
  * Contains a store "authToken" -> { "username": "someusername", ... }
  * Access it using node-authdb
+
+UsermetaDB
+----------
+
+ * Contains a store "userA:$blocked" -> "user1,user2,user3"
+
+It contains the list of users that "userA" has blocked. Invitations from users in this list won't be sent to "userA".
+
+Note, this database contains metadata for all users.
 
 Background Jobs
 ---------------
@@ -73,6 +84,10 @@ API
 ### response [401] Unauthorized
 
 If authToken is invalid.
+
+### response [403] Forbidden
+
+If the user is not allowed to send this invitation (for example she/he has been blocked).
 
 
 ## List user's invitations [GET]

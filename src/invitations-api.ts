@@ -12,6 +12,7 @@ import ServiceEnv from './service-env';
 import pkg = require('../package.json');
 
 let redisClient:redis.RedisClient|null = null;
+let usermetadbClient:redis.RedisClient|null = null;
 let authdbClient:any = null;
 let sendNotification:SendNotificationFunction|null = null;
 
@@ -207,6 +208,28 @@ class Invitation {
 // Methods
 //
 
+const checkBlocked = function (usermetadbClient: redis.RedisClient | null) {
+  return function (req: restify.Request, res: restify.Response, next: restify.Next) {
+    const from: string | undefined = req.params.user.username;
+    const to: string | undefined = req.body?.to;
+    if (!from || !to || !usermetadbClient) // cannot check for blocked users
+      return next();
+    usermetadbClient?.GET(`${to}:$blocked`, function (err: Error | null, value?: string | null) {
+      // Is the sending user is blocked by the receiver.
+      if (value && value.split(',').indexOf(from) >= 0) {
+        // Yes, return an error.
+        next(new restifyErrors.ForbiddenError({
+          message: 'You are not allowed to invite this player',
+          code: 'Blocked'
+        }));
+      }
+      else {
+        next();
+      }
+    })
+  };
+}
+
 const createInvitation = function(req, res, next) {
   const invitation = new Invitation(req.params.user.username, req.body);
   req.params.invitation = invitation;
@@ -333,7 +356,14 @@ const deleteInvitation = function(req: restify.Request, res: restify.Response, n
 // Init
 //
 
-const initialize = function(options?) {
+export interface InvitationsApiOptions {
+  authdbClient?: any;
+  redisClient?: redis.RedisClient;
+  usermetadbClient?: redis.RedisClient;
+  sendNotification?: SendNotificationFunction;
+}
+
+const initialize = function(options?: InvitationsApiOptions) {
   if (options == null) { options = {}; }
   if (options.authdbClient) {
     authdbClient = options.authdbClient;
@@ -343,6 +373,13 @@ const initialize = function(options?) {
       port: ServiceEnv.port('REDIS_AUTH', 6379)
     });
   }
+
+  usermetadbClient = options.usermetadbClient
+    ?? redis.createClient(
+      ServiceEnv.port('REDIS_USERMETA', 6379),
+      ServiceEnv.host('REDIS_USERMETA', 6379),
+        {no_ready_check: true}
+    );
 
   if (options.redisClient) {
     redisClient = options.redisClient;
@@ -399,7 +436,7 @@ const addRoutes = function(prefix: string, server: restify.Server) {
   });
 
   server.get(endpoint, listInvitations, updateExpireMiddleware);
-  server.post(endpoint, createInvitation, updateExpireMiddleware);
+  server.post(endpoint, checkBlocked(usermetadbClient), createInvitation, updateExpireMiddleware);
   return addDel(server, `${endpoint}/:invitationId`,
     findInvitationMiddleware, deleteInvitation, updateExpireMiddleware);
 };
