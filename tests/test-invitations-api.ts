@@ -403,6 +403,20 @@ describe("invitations-api", function() {
     testUsing("[post] ", delWithPost);
   });
 
+  describe('Blocked user cannot send invitations', function() {
+    it("prevent a user blocked by the receiver to create a new invitation", done => {
+      usermetadbClient.set(`${data.usernames.to}:$blocked`, data.usernames.from);
+      superagent
+      .post(endpoint(data.authTokens.valid))
+      .send(data.invitation)
+      .end(function(err, res) {
+        assert.equal(403, res.status);
+        assert.equal('Blocked', res.body.code);
+        done();
+      });
+    });
+  });
+
   /*
   // ANTI-SPAM
   //
