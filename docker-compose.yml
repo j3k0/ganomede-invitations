@@ -2,7 +2,7 @@ app:
     build: .
     command: sh -c "node build/src/index.js | npx bunyan"
     ports:
-     - "8000:8000"
+     - "8888:8000"
     links:
      - "redis:redis_invitations"
      - "authRedis:redis_auth"
