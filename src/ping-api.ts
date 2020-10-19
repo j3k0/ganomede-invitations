@@ -1,16 +1,13 @@
-/*
- * decaffeinate suggestions:
- * DS102: Remove unnecessary code created because of implicit returns
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-const ping = function(req, res, next) {
+import { Request, Response, Next, Server } from "restify";
+
+const ping = function(req: Request, res: Response, next: Next) {
   res.send("pong/" + req.params.token);
-  return next();
+  next();
 };
 
-const addRoutes = function(prefix, server) {
+const addRoutes = function(prefix: string, server: Server) {
   server.get(`/${prefix}/ping/:token`, ping);
-  return server.head(`/${prefix}/ping/:token`, ping);
+  server.head(`/${prefix}/ping/:token`, ping);
 };
 
 export default {addRoutes};

@@ -7,11 +7,12 @@ import * as assert from "assert";
 import pingApi from "../src/ping-api";
 
 import {Server} from "./fake-restify";
+
 const server = new Server();
 
 describe("ping-api", function() {
 
-  before(() => pingApi.addRoutes("users", server));
+  before(() => pingApi.addRoutes("users", server as any));
 
   it("should have get and head routes", function() {
     assert.ok(server.routes.get["/users/ping/:token"]);

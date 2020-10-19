@@ -425,7 +425,7 @@ const addRoutes = function(prefix: string, server: restify.Server) {
   // All requests must be authorized.
   const authMiddleware = authdbHelper.create({
     authdbClient,
-    secret: process.env.API_SECRET
+    secret: process.env.API_SECRET || ''
   });
   server.use(function(req, res, next) {
     const authorize = req.getRoute().path.toString().startsWith(endpoint);
