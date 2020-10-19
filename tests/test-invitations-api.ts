@@ -410,8 +410,8 @@ describe("invitations-api", function() {
       .post(endpoint(data.authTokens.valid))
       .send(data.invitation)
       .end(function(err, res) {
-        assert.equal(403, res.status);
-        assert.equal('Blocked', res.body.code);
+        assert.equal(423, res.status); // Error 403 will open the "login" window on some clients...
+        assert.equal('InvitationBlocked', res.body.code);
         done();
       });
     });

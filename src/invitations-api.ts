@@ -219,8 +219,9 @@ const checkBlocked = function (usermetadbClient: redis.RedisClient | null) {
       if (value && value.split(',').indexOf(from) >= 0) {
         // Yes, return an error.
         next(new restifyErrors.ForbiddenError({
-          message: 'You are not allowed to invite this player',
-          code: 'Blocked'
+          statusCode: 423,
+          message: 'You are not allowed to invite this player.',
+          code: 'InvitationBlocked'
         }));
       }
       else {

@@ -85,9 +85,11 @@ API
 
 If authToken is invalid.
 
-### response [403] Forbidden
+### response [423] Blocked
 
 If the user is not allowed to send this invitation (for example she/he has been blocked).
+
+Note: Error code would better be `403`, but the game using this module will show a login screen when `403` is returned. That's why we chose code `423`.
 
 
 ## List user's invitations [GET]
