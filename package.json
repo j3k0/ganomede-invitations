@@ -24,7 +24,7 @@
     "forever": "^3.0.0",
     "mocha": "^7.2.0",
     "node-statsd": "^0.1.1",
-    "redis": "^3.0.2",
+    "redis": "^3.1.1",
     "restify": "^8.5.1",
     "restify-errors": "^8.0.2",
     "source-map-support": "^0.5.19",
